@@ -1,4 +1,4 @@
-import 'package:duanju_app/app_update.dart';
+import 'package:gomovie_app/app_update.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

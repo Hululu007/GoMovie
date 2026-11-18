@@ -107,7 +107,7 @@ var (
 	}{results: map[string]pacResult{}}
 
 	pacSession = sync.OnceValues(func() (uintptr, error) {
-		agent, err := windows.UTF16PtrFromString("duanju")
+		agent, err := windows.UTF16PtrFromString("gomovie")
 		if err != nil {
 			return 0, err
 		}

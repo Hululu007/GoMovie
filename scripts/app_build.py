@@ -10,12 +10,12 @@ ENVIRONMENT_DEFINES = ['PROJECT_URL', 'TELEGRAM_GROUP_URL', 'TELEGRAM_CHANNEL_UR
 
 
 class AppBuild:
-    slug = 'guoapp'
-    display_name = '小果影视'
+    slug = 'gomovie'
+    display_name = 'GoMovie'
 
     @property
     def bundle_identifier(self):
-        return os.environ.get('PACKAGE_NAME', '').strip() or 'com.guoapp.app'
+        return os.environ.get('PACKAGE_NAME', '').strip() or 'com.gomovie.app'
 
     @property
     def flutter_arguments(self):
@@ -35,10 +35,10 @@ class AppBuild:
         flags = '-s -w'
         update_server = os.environ.get('UPDATE_SERVER_URL', '').strip()
         if update_server:
-            flags += ' -X duanjuapp/native/core.nativeUpdateServer=' + update_server
+            flags += ' -X gomovie/native/core.nativeUpdateServer=' + update_server
         project = os.environ.get('PROJECT_URL', '').strip()
         if project:
-            flags += ' -X duanjuapp/native/core.nativeProjectURL=' + project
+            flags += ' -X gomovie/native/core.nativeProjectURL=' + project
         return flags
 
 

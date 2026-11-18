@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import 'package:duanju_app/core_bridge.dart';
-import 'package:duanju_app/local_store.dart';
-import 'package:duanju_app/models.dart';
-import 'package:duanju_app/playback_session.dart';
+import 'package:gomovie_app/core_bridge.dart';
+import 'package:gomovie_app/local_store.dart';
+import 'package:gomovie_app/models.dart';
+import 'package:gomovie_app/playback_session.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart';
 

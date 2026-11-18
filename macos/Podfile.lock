@@ -1,5 +1,5 @@
 PODS:
-  - DuanjuCore (0.2.0)
+  - GoMovieCore (0.2.0)
   - dynamic_color (0.0.3):
     - FlutterMacOS
   - ffmpeg_kit_flutter_new_min_gpl (8.1.2):
@@ -33,7 +33,7 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
-  - DuanjuCore (from `DuanjuCore`)
+  - GoMovieCore (from `GoMovieCore`)
   - dynamic_color (from `Flutter/ephemeral/.symlinks/plugins/dynamic_color/macos`)
   - ffmpeg_kit_flutter_new_min_gpl (from `Flutter/ephemeral/.symlinks/plugins/ffmpeg_kit_flutter_new_min_gpl/macos`)
   - file_picker_darwin (from `Flutter/ephemeral/.symlinks/plugins/file_picker_darwin/darwin`)
@@ -49,8 +49,8 @@ DEPENDENCIES:
   - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
 
 EXTERNAL SOURCES:
-  DuanjuCore:
-    :path: DuanjuCore
+  GoMovieCore:
+    :path: GoMovieCore
   dynamic_color:
     :path: Flutter/ephemeral/.symlinks/plugins/dynamic_color/macos
   ffmpeg_kit_flutter_new_min_gpl:
@@ -79,7 +79,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
 SPEC CHECKSUMS:
-  DuanjuCore: bf4b3ce5e2a5939bb64d1b7b4f085a6270293245
+  GoMovieCore: bf4b3ce5e2a5939bb64d1b7b4f085a6270293245
   dynamic_color: 4f4c0d2861eb7ff36a2a5e8e2d441e1b6c681ddf
   ffmpeg_kit_flutter_new_min_gpl: 6607f08cd5073c5e8d1352c284fb523cf0ad84bf
   file_picker_darwin: 4c2b9a50ea44cb3b071381ea0cf48591bdd80251

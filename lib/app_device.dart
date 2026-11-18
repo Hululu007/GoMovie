@@ -10,7 +10,7 @@ class AppDevice {
   const AppDevice({this.television = false, this.version = ''});
   final bool television;
   final String version;
-  static const channel = MethodChannel('duanju/device');
+  static const channel = MethodChannel('gomovie/device');
   static var _televisionMode = false;
   static var _phoneMode = false;
   static var _orientation = PlayerOrientation.auto;

@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:duanju_app/danmaku_emoji.dart';
+import 'package:gomovie_app/danmaku_emoji.dart';
 
 void main() {
   test('解析文字与表情片段', () {

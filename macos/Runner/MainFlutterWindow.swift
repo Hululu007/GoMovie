@@ -79,7 +79,7 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
     mediaControls = MediaControls(messenger: flutterViewController.engine.binaryMessenger)
     let channel = FlutterMethodChannel(
-      name: "duanju/device", binaryMessenger: flutterViewController.engine.binaryMessenger)
+      name: "gomovie/device", binaryMessenger: flutterViewController.engine.binaryMessenger)
     deviceChannel = channel
     channel.setMethodCallHandler { [weak self] call, result in
       if call.method == "windowFrame" {
@@ -149,7 +149,7 @@ final class MediaControls {
   private var playing = false
 
   init(messenger: FlutterBinaryMessenger) {
-    channel = FlutterMethodChannel(name: "duanju/media", binaryMessenger: messenger)
+    channel = FlutterMethodChannel(name: "gomovie/media", binaryMessenger: messenger)
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
       case "update":

@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 
 class NativeTextInput {
-  static const _channel = MethodChannel('duanju/text_input');
+  static const _channel = MethodChannel('gomovie/text_input');
 
   static void start(
     String text, {

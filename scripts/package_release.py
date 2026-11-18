@@ -46,7 +46,7 @@ def verify_macos_application(application):
     if 'arm64' not in architectures or 'x86_64' not in architectures:
         raise SystemExit('macOS 包应同时包含 arm64 和 x86_64：' + architectures)
     symbols = subprocess.run(['nm', '-gU', str(executable)], capture_output=True, text=True).stdout
-    for symbol in ['_DuanjuRequest', '_DuanjuFree']:
+    for symbol in ['_GoMovieRequest', '_GoMovieFree']:
         if symbol not in symbols:
             raise SystemExit('macOS 包缺少 FFI 入口：' + symbol)
     frameworks = application / 'Contents' / 'Frameworks'
@@ -218,7 +218,7 @@ if options.platform == 'android':
         with zipfile.ZipFile(source) as archive:
             names = set(archive.namelist())
             required = [f'lib/{abi}/{library}' for library in
-                        ['libduanju_core.so', 'libflutter.so', 'libapp.so', 'libmpv.so', 'libffmpegkit.so']]
+                        ['libgomovie_core.so', 'libflutter.so', 'libapp.so', 'libmpv.so', 'libffmpegkit.so']]
             missing = set(required) - names
             if missing:
                 raise SystemExit('APK 缺少原生库：' + ', '.join(sorted(missing)))
@@ -227,8 +227,8 @@ if options.platform == 'android':
         artifacts.append(target)
 elif options.platform == 'windows':
     bundle = root / 'build' / 'windows' / 'x64' / 'runner' / 'Release'
-    bundle_executable = 'guoapp.exe'
-    required = [bundle_executable, 'duanju_core.dll', 'flutter_windows.dll', 'libffmpegkit.dll',
+    bundle_executable = 'gomovie.exe'
+    required = [bundle_executable, 'gomovie_core.dll', 'flutter_windows.dll', 'libffmpegkit.dll',
                 'libmpv-2.dll', 'msvcp140.dll', 'vcruntime140.dll',
                 'data/icudtl.dat', 'data/app.so']
     missing = [name for name in required if not (bundle / name).is_file()]
@@ -250,7 +250,7 @@ elif options.platform == 'windows':
     artifacts.append(target)
     artifacts.append(package_windows_installer(bundle, bundle_executable))
 else:
-    application = root / 'build' / 'macos' / 'Build' / 'Products' / 'Release' / 'duanju_app.app'
+    application = root / 'build' / 'macos' / 'Build' / 'Products' / 'Release' / 'gomovie_app.app'
     if not application.is_dir():
         raise SystemExit('缺少 macOS 应用：' + str(application))
     verify_macos_application(application)

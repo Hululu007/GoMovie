@@ -1,6 +1,6 @@
 const repository = 'Xanerix/guoapp';
 const platforms = new Set(['android', 'ios', 'windows', 'darwin', 'linux']);
-const builds = new Set(['guoapp', 'hongguojian', 'zhenguojian']);
+const builds = new Set(['gomovie', 'hongguojian', 'zhenguojian']);
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {

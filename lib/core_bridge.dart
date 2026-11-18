@@ -30,10 +30,10 @@ typedef _DartFree = void Function(Pointer<Utf8>);
 String _nativeRequest(String body) {
   final DynamicLibrary library;
   if (Platform.isAndroid) {
-    library = DynamicLibrary.open('libduanju_core.so');
+    library = DynamicLibrary.open('libgomovie_core.so');
   } else if (Platform.isWindows) {
     library = DynamicLibrary.open(
-      path.join(path.dirname(Platform.resolvedExecutable), 'duanju_core.dll'),
+      path.join(path.dirname(Platform.resolvedExecutable), 'gomovie_core.dll'),
     );
   } else if (Platform.isIOS || Platform.isMacOS) {
     library = DynamicLibrary.process();
@@ -41,9 +41,9 @@ String _nativeRequest(String body) {
     throw UnsupportedError('当前支持 Android、iOS、Windows 和 macOS');
   }
   final request = library.lookupFunction<_NativeRequest, _DartRequest>(
-    'DuanjuRequest',
+    'GoMovieRequest',
   );
-  final free = library.lookupFunction<_NativeFree, _DartFree>('DuanjuFree');
+  final free = library.lookupFunction<_NativeFree, _DartFree>('GoMovieFree');
   final input = body.toNativeUtf8();
   Pointer<Utf8> output = nullptr;
   try {

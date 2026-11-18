@@ -1,4 +1,4 @@
-package com.guoapp
+package com.gomovie
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -23,7 +23,7 @@ import android.os.PowerManager
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
-private const val MEDIA_CONTROL_ACTION = "com.guoapp.MEDIA_CONTROL"
+private const val MEDIA_CONTROL_ACTION = "com.gomovie.MEDIA_CONTROL"
 private const val ARTWORK_EXTENT = 512
 
 class MediaControls(context: Context, messenger: BinaryMessenger) {
@@ -37,10 +37,10 @@ class MediaControls(context: Context, messenger: BinaryMessenger) {
     }
 
     private val context = context.applicationContext
-    private val channel = MethodChannel(messenger, "duanju/media")
+    private val channel = MethodChannel(messenger, "gomovie/media")
     private val notifications = this.context.getSystemService(NotificationManager::class.java)
     private val audio = this.context.getSystemService(AudioManager::class.java)
-    private val session = MediaSession(this.context, "guoapp")
+    private val session = MediaSession(this.context, "gomovie")
     private val wakeLock = this.context.getSystemService(PowerManager::class.java)
         .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "guoapp:playback")
         .apply { setReferenceCounted(false) }

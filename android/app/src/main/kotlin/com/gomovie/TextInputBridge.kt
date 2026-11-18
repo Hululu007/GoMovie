@@ -1,4 +1,4 @@
-package com.guoapp
+package com.gomovie
 
 import android.app.Activity
 import android.content.Context
@@ -18,7 +18,7 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
 class TextInputBridge(private val activity: Activity, messenger: BinaryMessenger) {
-    private val channel = MethodChannel(messenger, "duanju/text_input")
+    private val channel = MethodChannel(messenger, "gomovie/text_input")
     private val keyboard = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
     private var input: HiddenInput? = null
     private var editing = false

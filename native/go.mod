@@ -1,4 +1,4 @@
-module duanjuapp/native
+module gomovie/native
 
 go 1.26.10
 

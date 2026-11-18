@@ -35,7 +35,7 @@ python3 scripts/build_ios.py --core-only [--simulator]
 python3 scripts/build_ios.py --export-options /path/to/ExportOptions.plist
 ~~~
 
-产物在 `dist/android`、`dist/windows`、`dist/ios`、`dist/macos`，以 `guoapp-` 开头。Windows 同时出便携 zip 和 Inno Setup 安装包（`windows/installer/setup.iss`，简体中文语言文件取自 Inno Setup 官方仓库），安装包以包名为 AppId，默认装到 `%LOCALAPPDATA%\Programs\<包名>`，安装时可提权改为所有用户，卸载窗口先显示「卸载选项」页（插在卸载进度窗口里），勾选「同时清除本地数据」才删除 `%APPDATA%\<包名>`（含默认下载目录），默认保留；静默卸载不删。缓存目录 `%LOCALAPPDATA%\<包名>` 卸载时总是删除。macOS 出 arm64 + x86_64 通用 dmg；dmg 的安装窗口（背景图、图标位置、隐藏工具栏）由 `dmgbuild` 写入 `.DS_Store`，打包机需要 `pip install dmgbuild Pillow`，没装时会退回普通镜像并提示。默认 ad-hoc 签名，从网络下载的 dmg 在其他 Mac 上首次打开会被 Gatekeeper 拦一次（右键「打开」，或执行 `xattr -dr com.apple.quarantine /Applications/小果影视.app`）。有 Developer ID 时用 `package_release.py --platform macos --identity "Developer ID Application: ..."` 重新打包并公证，才能免掉这一步。本机 Android 签名读 `android/key.properties`（不入库）。
+产物在 `dist/android`、`dist/windows`、`dist/ios`、`dist/macos`，以 `guoapp-` 开头。Windows 同时出便携 zip 和 Inno Setup 安装包（`windows/installer/setup.iss`，简体中文语言文件取自 Inno Setup 官方仓库），安装包以包名为 AppId，默认装到 `%LOCALAPPDATA%\Programs\<包名>`，安装时可提权改为所有用户，卸载窗口先显示「卸载选项」页（插在卸载进度窗口里），勾选「同时清除本地数据」才删除 `%APPDATA%\<包名>`（含默认下载目录），默认保留；静默卸载不删。缓存目录 `%LOCALAPPDATA%\<包名>` 卸载时总是删除。macOS 出 arm64 + x86_64 通用 dmg；dmg 的安装窗口（背景图、图标位置、隐藏工具栏）由 `dmgbuild` 写入 `.DS_Store`，打包机需要 `pip install dmgbuild Pillow`，没装时会退回普通镜像并提示。默认 ad-hoc 签名，从网络下载的 dmg 在其他 Mac 上首次打开会被 Gatekeeper 拦一次（右键「打开」，或执行 `xattr -dr com.apple.quarantine /Applications/GoMovie.app`）。有 Developer ID 时用 `package_release.py --platform macos --identity "Developer ID Application: ..."` 重新打包并公证，才能免掉这一步。本机 Android 签名读 `android/key.properties`（不入库）。
 
 其他脚本：`generate_brand_assets.py` 从 `brand_icon.svg` 生成各平台图标；`clear_app_data.py`、`clear_catalog_cache.py` 清理 Windows 上的应用数据和剧库缓存。
 
@@ -56,7 +56,7 @@ Flutter 测试一律带 `DISABLE_REMOTE_IMAGES=true`，避免加载站源图片�
 
 Flutter 界面 + Go 原生核心。站源请求、解析、签名、缓存、下载调度和播放代理都在 Go 里完成，Dart 只负责界面、播放器和本地用户数据。
 
-- **FFI**：`native/bridge` 以 `-buildmode=c-shared` 只导出 `DuanjuRequest(json) -> json` 与 `DuanjuFree`。`lib/core_bridge.dart` 的 `NativeRepository` 把每次调用编码成 `{"action": ...}`，在 `Isolate.run` 中调用；Go 侧在 `native/core/app_runtime.go` 的 `NativeRequest` 里按 action 分派。新增能力两端都要改。Android 与 Windows 动态加载（`libduanju_core.so` / `duanju_core.dll`）；iOS 与 macOS 改成 `-buildmode=c-archive` 静态库（`ios/DuanjuCore`、`macos/DuanjuCore`）链进主程序，Dart 侧用 `DynamicLibrary.process()` 查符号，避免 dylib 的签名与库校验问题。
+- **FFI**：`native/bridge` 以 `-buildmode=c-shared` 只导出 `GoMovieRequest(json) -> json` 与 `GoMovieFree`。`lib/core_bridge.dart` 的 `NativeRepository` 把每次调用编码成 `{"action": ...}`，在 `Isolate.run` 中调用；Go 侧在 `native/core/app_runtime.go` 的 `NativeRequest` 里按 action 分派。新增能力两端都要改。Android 与 Windows 动态加载（`libgomovie_core.so` / `gomovie_core.dll`）；iOS 与 macOS 改成 `-buildmode=c-archive` 静态库（`ios/GoMovieCore`、`macos/GoMovieCore`）链进主程序，Dart 侧用 `DynamicLibrary.process()` 查符号，避免 dylib 的签名与库校验问题。
 - **Go 核心**：`native/core` 是运行时。站源模块由 `module_loader.go` 读取清单并注册，`module_script.go` 用 [goja](https://github.com/dop251/goja) 执行并适配成内部的 `Provider` 接口。`app_*.go` 运行时与业务（目录缓存、下载、弹幕、存储、设置），`network_*.go` HTTP 客户端、DNS、CDN、限流。`app_stream.go` 在本机起播放代理，重写 HLS playlist、透传 Range，并处理带密钥的媒体。
 - **Flutter**：界面在 `lib/ui/`（按页面分子目录，入口 `lib/main.dart` → `lib/ui/app.dart`），逻辑层平铺在 `lib/`，状态管理只用 ChangeNotifier。
 - **播放与下载**：播放器用 [media_kit](https://github.com/media-kit/media-kit) / libmpv；每集下载完由 [FFmpegKit min-gpl](https://github.com/sk3llo/ffmpeg_kit_flutter)（含 GPL 媒体组件）转成单个 mp4，只换封装、不重新编码，不参与正常播放。
@@ -137,7 +137,7 @@ Flutter 界面 + Go 原生核心。站源请求、解析、签名、缓存、下
 
 Android 签名只用仓库 Secrets：`SIGNING_KEYSTORE_BASE64`、`SIGNING_KEYSTORE_PASSWORD`、`SIGNING_KEY_ALIAS`、`SIGNING_KEY_PASSWORD`，另需仓库变量 `SIGNING_CERT_SHA256`（证书 SHA-256，冒号和大小写不限），缺任意一项都会失败。CI 通过环境变量把签名传给 Gradle；本机读 `android/key.properties`（不入库）。
 
-包名取环境变量 `PACKAGE_NAME`（CI 取同名仓库变量），没设或为空时用 `com.guoapp.app`，由 Android `build.gradle.kts`、Windows `app_branding.cmake`、iOS / macOS `scripts/app_build.py` 读取。应用名固定为「小果影视」，英文名 `GuoApp`；安装包前缀、Windows 可执行文件和使用统计的构建标识为 `guoapp`。
+包名取环境变量 `PACKAGE_NAME`（CI 取同名仓库变量），没设或为空时用 `com.gomovie.app`，由 Android `build.gradle.kts`、Windows `app_branding.cmake`、iOS / macOS `scripts/app_build.py` 读取。应用名固定为「GoMovie」，英文名 `GuoApp`；安装包前缀、Windows 可执行文件和使用统计的构建标识为 `guoapp`。
 
 Windows 数据目录为 `%APPDATA%\<包名>`：`Runner.rc` 不设 CompanyName，ProductName 为包名，`path_provider` 据此拼出应用支持目录。删除不影响使用的缓存（`covers-v1/`、`catalogs.json`、`rankings.json`）放在 `getApplicationCacheDirectory()` 给出的目录，Windows 为 `%LOCALAPPDATA%\<包名>`，便携版为 `userdata\cache`；初始化时由 `moveLegacyNativeCache` 把数据目录里的旧缓存搬过去，新增缓存文件要写进 `cacheDirectory` 并加到这份清单。站源的 `CatalogState`（红果设备、辅助设备和列表游标）不算缓存，存在数据目录的 `provider-states.json`，旧版写在 `catalogs.json` 里的会在首次启动时迁出。旧版数据在 `%APPDATA%\真果鉴\真果鉴`，`lib/windows_data_migration.dart` 在启动最早阶段检查：新目录为空且旧目录存在时整个改名移入；新目录已有内容或移动失败都不处理，失败写入日志。Android TV 横幅 `tv_banner.png` 只有图标不带文字，改名不用重新生成。
 
@@ -156,4 +156,4 @@ npx wrangler d1 execute guoapp-stats --remote --command "SELECT COUNT(DISTINCT i
 npx wrangler d1 execute guoapp-stats --remote --command "SELECT platform, build, version, COUNT(*) FROM pings WHERE day = date('now', '+8 hours') GROUP BY 1, 2, 3 ORDER BY 4 DESC"  # 今日分布
 ~~~
 
-应用显示名：Android 在 `android/app/build.gradle.kts`，Windows 在 `windows/runner/app_branding.cmake`，iOS 由 Xcode「Thin Binary」构建阶段写入，macOS 由 `scripts/package_release.py` 打包时改 `CFBundleDisplayName` / `CFBundleName` / `CFBundleIdentifier` 后重新签名。iOS 的 `CFBundleDisplayName` 用英文名 `GuoApp` 以通过侧载工具的名称校验，中文名写在 `zh-Hans.lproj/InfoPlist.strings`。macOS 关闭了 App Sandbox，以便本地播放代理和自选下载目录正常工作；系统代理由 `MainFlutterWindow.swift` 的 `duanju/device` 通道读取。
+应用显示名：Android 在 `android/app/build.gradle.kts`，Windows 在 `windows/runner/app_branding.cmake`，iOS 由 Xcode「Thin Binary」构建阶段写入，macOS 由 `scripts/package_release.py` 打包时改 `CFBundleDisplayName` / `CFBundleName` / `CFBundleIdentifier` 后重新签名。iOS 的 `CFBundleDisplayName` 用英文名 `GuoApp` 以通过侧载工具的名称校验，中文名写在 `zh-Hans.lproj/InfoPlist.strings`。macOS 关闭了 App Sandbox，以便本地播放代理和自选下载目录正常工作；系统代理由 `MainFlutterWindow.swift` 的 `gomovie/device` 通道读取。

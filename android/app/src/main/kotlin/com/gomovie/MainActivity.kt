@@ -1,4 +1,4 @@
-package com.guoapp
+package com.gomovie
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.android.FlutterSurfaceView
@@ -54,7 +54,7 @@ private const val SURFACE_RESIZE_REDRAW_WAIT_MS = 100L
 private const val ORIENTATION_SETTLE_MS = 800L
 private const val CREATE_DOCUMENT_REQUEST = 7301
 private const val STORAGE_PERMISSION_REQUEST = 7302
-private const val PICTURE_IN_PICTURE_ACTION = "com.guoapp.PICTURE_IN_PICTURE_ACTION"
+private const val PICTURE_IN_PICTURE_ACTION = "com.gomovie.PICTURE_IN_PICTURE_ACTION"
 
 private const val LARGE_CANVAS_DP = 1000f
 private const val TARGET_CANVAS_DP = 720f
@@ -131,7 +131,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun renderingPreferences() =
-        getSharedPreferences("duanju_rendering", Context.MODE_PRIVATE)
+        getSharedPreferences("gomovie_rendering", Context.MODE_PRIVATE)
 
     private fun compatibleRendering(): Boolean =
         renderingPreferences().getBoolean("compatibleRendering", false)
@@ -253,8 +253,8 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        televisionMode = if (savedInstanceState?.containsKey("duanju.televisionMode") == true) {
-            savedInstanceState.getBoolean("duanju.televisionMode")
+        televisionMode = if (savedInstanceState?.containsKey("gomovie.televisionMode") == true) {
+            savedInstanceState.getBoolean("gomovie.televisionMode")
         } else isTelevisionDevice()
         super.onCreate(savedInstanceState)
         if (televisionMode) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
@@ -327,7 +327,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putBoolean("duanju.televisionMode", televisionMode)
+        outState.putBoolean("gomovie.televisionMode", televisionMode)
         super.onSaveInstanceState(outState)
     }
 
@@ -335,7 +335,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         textInput = TextInputBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         mediaControls = MediaControls(this, flutterEngine.dartExecutor.binaryMessenger)
-        deviceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "duanju/device")
+        deviceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gomovie/device")
             .also { channel ->
                 channel.setMethodCallHandler { call, result ->
                     when (call.method) {

@@ -54,7 +54,7 @@ class MediaControls {
   MediaControls._();
 
   static final instance = MediaControls._();
-  static const _channel = MethodChannel('duanju/media');
+  static const _channel = MethodChannel('gomovie/media');
   static const _drift = Duration(milliseconds: 1500);
 
   static bool get supported => switch (defaultTargetPlatform) {

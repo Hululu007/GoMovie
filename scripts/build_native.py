@@ -58,7 +58,7 @@ if options.platform == 'android':
         compiler = compilers / (name + ('.cmd' if platform.system() == 'Windows' else ''))
         if not compiler.exists():
             raise SystemExit('缺少 Android NDK 编译器：' + str(compiler))
-        output = root / 'android' / 'app' / 'src' / 'main' / 'jniLibs' / abi / 'libduanju_core.so'
+        output = root / 'android' / 'app' / 'src' / 'main' / 'jniLibs' / abi / 'libgomovie_core.so'
         extra = {'CGO_LDFLAGS': '-Wl,-z,max-page-size=16384'}
         if architecture == 'arm':
             extra['GOARM'] = '7'
@@ -67,7 +67,7 @@ elif options.platform == 'windows':
     compiler = shutil.which('x86_64-w64-mingw32-gcc') or (shutil.which('gcc') if platform.system() == 'Windows' else None)
     if not compiler:
         raise SystemExit('请安装 MinGW-w64，并将其 bin 目录加入 PATH。')
-    build('windows', 'amd64', compiler, root / 'windows' / 'runner' / 'duanju_core.dll',
+    build('windows', 'amd64', compiler, root / 'windows' / 'runner' / 'gomovie_core.dll',
           {'CGO_LDFLAGS': '-static-libgcc'})
 else:
     if platform.system() != 'Darwin':
@@ -75,10 +75,10 @@ else:
     compiler = shutil.which('clang')
     if not compiler:
         raise SystemExit('需要安装 Xcode Command Line Tools。')
-    output = root / 'macos' / 'DuanjuCore' / 'libDuanjuCore.a'
+    output = root / 'macos' / 'GoMovieCore' / 'libGoMovieCore.a'
     slices = []
     for architecture, triple in [('arm64', 'arm64-apple-macos12.0'), ('amd64', 'x86_64-apple-macos12.0')]:
-        library = root / 'native' / 'build' / 'macos' / architecture / 'libDuanjuCore.a'
+        library = root / 'native' / 'build' / 'macos' / architecture / 'libGoMovieCore.a'
         library.parent.mkdir(parents=True, exist_ok=True)
         print('Building ' + str(library.relative_to(root)), flush=True)
         build_env = environment | {'GOOS': 'darwin', 'GOARCH': architecture, 'CC': str(compiler),

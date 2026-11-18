@@ -73,7 +73,7 @@ std::chrono::milliseconds Milliseconds(double value) {
 
 MediaControls::MediaControls(HWND window, flutter::BinaryMessenger* messenger)
     : channel_(std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          messenger, "duanju/media",
+          messenger, "gomovie/media",
           &flutter::StandardMethodCodec::GetInstance())) {
   try {
     auto interop = winrt::get_activation_factory<

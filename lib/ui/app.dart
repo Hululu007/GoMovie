@@ -21,8 +21,8 @@ import 'theme/system_color.dart';
 import 'users/unlock_page.dart';
 import 'widgets/focus_ring.dart';
 
-class DuanjuApp extends StatefulWidget {
-  const DuanjuApp({
+class GoMovieApp extends StatefulWidget {
+  const GoMovieApp({
     super.key,
     required this.repository,
     this.store,
@@ -39,10 +39,10 @@ class DuanjuApp extends StatefulWidget {
   final String version;
 
   @override
-  State<DuanjuApp> createState() => _DuanjuAppState();
+  State<GoMovieApp> createState() => _GoMovieAppState();
 }
 
-class _DuanjuAppState extends State<DuanjuApp> with WidgetsBindingObserver {
+class _GoMovieAppState extends State<GoMovieApp> with WidgetsBindingObserver {
   final _navigator = GlobalKey<NavigatorState>();
   Color? _systemColor;
   int? _profileEpoch;

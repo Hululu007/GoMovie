@@ -7,9 +7,9 @@ coverage/
 
 native/build/
 android/app/src/main/jniLibs/
-windows/runner/duanju_core.dll
-windows/runner/duanju_core.h
-ios/DuanjuCore/*.xcframework/
+windows/runner/gomovie_core.dll
+windows/runner/gomovie_core.h
+ios/GoMovieCore/*.xcframework/
 .wrangler/
 *.test
 *.out

@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:duanju_app/core_bridge.dart';
-import 'package:duanju_app/download_merge.dart';
-import 'package:duanju_app/media_pipeline.dart';
-import 'package:duanju_app/merge_queue.dart';
-import 'package:duanju_app/models.dart';
+import 'package:gomovie_app/core_bridge.dart';
+import 'package:gomovie_app/download_merge.dart';
+import 'package:gomovie_app/media_pipeline.dart';
+import 'package:gomovie_app/merge_queue.dart';
+import 'package:gomovie_app/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

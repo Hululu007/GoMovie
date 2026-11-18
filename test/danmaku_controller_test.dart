@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:duanju_app/core_bridge.dart';
-import 'package:duanju_app/danmaku_controller.dart';
-import 'package:duanju_app/danmaku_models.dart';
-import 'package:duanju_app/models.dart';
-import 'package:duanju_app/playback_preferences.dart';
+import 'package:gomovie_app/core_bridge.dart';
+import 'package:gomovie_app/danmaku_controller.dart';
+import 'package:gomovie_app/danmaku_models.dart';
+import 'package:gomovie_app/models.dart';
+import 'package:gomovie_app/playback_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

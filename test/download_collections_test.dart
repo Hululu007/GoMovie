@@ -1,6 +1,6 @@
-import 'package:duanju_app/download_collections.dart';
-import 'package:duanju_app/download_preferences.dart';
-import 'package:duanju_app/models.dart';
+import 'package:gomovie_app/download_collections.dart';
+import 'package:gomovie_app/download_preferences.dart';
+import 'package:gomovie_app/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';

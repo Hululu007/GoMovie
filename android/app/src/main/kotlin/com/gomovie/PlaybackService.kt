@@ -1,4 +1,4 @@
-package com.guoapp
+package com.gomovie
 
 import android.app.Notification
 import android.app.Service
@@ -9,7 +9,7 @@ import android.os.IBinder
 
 class PlaybackService : Service() {
     companion object {
-        const val ACTION_DETACH = "com.guoapp.PLAYBACK_DETACH"
+        const val ACTION_DETACH = "com.gomovie.PLAYBACK_DETACH"
     }
 
     private var foreground = false

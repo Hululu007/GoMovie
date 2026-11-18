@@ -9,7 +9,7 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR FLUTTER_TARGET_PLATFORM STREQUAL "windows-
   message(FATAL_ERROR "The pinned media libraries require Windows x64.")
 endif()
 
-function(duanju_native_archive filename url digest destination)
+function(gomovie_native_archive filename url digest destination)
   set(archive "${CMAKE_BINARY_DIR}/${filename}")
   if(EXISTS "${archive}")
     file(SHA256 "${archive}" actual_digest)
@@ -33,8 +33,8 @@ function(duanju_native_archive filename url digest destination)
   endif()
 
   set(valid FALSE)
-  if(EXISTS "${destination}/.duanju-sha256")
-    file(READ "${destination}/.duanju-sha256" extracted_digest)
+  if(EXISTS "${destination}/.gomovie-sha256")
+    file(READ "${destination}/.gomovie-sha256" extracted_digest)
     if(extracted_digest STREQUAL digest)
       set(valid TRUE)
     endif()
@@ -60,12 +60,12 @@ function(duanju_native_archive filename url digest destination)
         message(FATAL_ERROR "${filename} is missing ${required}")
       endif()
     endforeach()
-    file(WRITE "${destination}/.duanju-sha256" "${digest}")
+    file(WRITE "${destination}/.gomovie-sha256" "${digest}")
   endif()
 endfunction()
 
 set(LIBMPV_SRC "${CMAKE_BINARY_DIR}/libmpv")
-duanju_native_archive(
+gomovie_native_archive(
   "mpv-dev-x86_64-20261111-git-bcde6b93cc.7z"
   "https://github.com/Xanerix/guoapp/releases/download/windows-native-deps/mpv-dev-x86_64-20261111-git-bcde6b93cc.7z"
   "273c079b11ea5575822f972756f4c9a71149a5c10130353abeb8586738938452"

@@ -1,4 +1,4 @@
-import 'package:duanju_app/models.dart';
+import 'package:gomovie_app/models.dart';
 
 const allSourcesEnabled = !bool.fromEnvironment('ONLY_HONGGUO');
 
@@ -37,7 +37,7 @@ void installSourceFixture() => SourceSite.install([
   _site('huangju', '剧果'),
   _site('yeguo', '野果'),
   _site('dsd', '帝果', vipPrompt: false),
-  _site('jinguoduanju', '禁果短剧'),
+  _site('jinguogomovie', '禁果短剧'),
   _site('jinguo', '禁果'),
   _site('heitao', '黑桃'),
   _site('beabox', '笔盒'),

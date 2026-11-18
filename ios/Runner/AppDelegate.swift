@@ -1,6 +1,6 @@
 import Flutter
 import UIKit
-import DuanjuCore
+import GoMovieCore
 import CFNetwork
 import AVFoundation
 import MediaPlayer
@@ -34,7 +34,7 @@ import MediaPlayer
       mediaControls = MediaControls(messenger: registrar.messenger())
     }
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DeviceSettings") {
-      let channel = FlutterMethodChannel(name: "duanju/device", binaryMessenger: registrar.messenger())
+      let channel = FlutterMethodChannel(name: "gomovie/device", binaryMessenger: registrar.messenger())
       channel.setMethodCallHandler { call, result in
         if call.method == "battery" {
           let device = UIDevice.current
@@ -113,7 +113,7 @@ final class MediaControls {
   private var resumeAfterInterruption = false
 
   init(messenger: FlutterBinaryMessenger) {
-    channel = FlutterMethodChannel(name: "duanju/media", binaryMessenger: messenger)
+    channel = FlutterMethodChannel(name: "gomovie/media", binaryMessenger: messenger)
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
       case "update":

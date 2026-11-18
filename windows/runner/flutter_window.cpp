@@ -98,7 +98,7 @@ bool FlutterWindow::OnCreate() {
       GetHandle(), flutter_controller_->engine()->messenger());
   device_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          flutter_controller_->engine()->messenger(), "duanju/device",
+          flutter_controller_->engine()->messenger(), "gomovie/device",
           &flutter::StandardMethodCodec::GetInstance());
   device_channel_->SetMethodCallHandler(
       [this](const flutter::MethodCall<flutter::EncodableValue>& call,

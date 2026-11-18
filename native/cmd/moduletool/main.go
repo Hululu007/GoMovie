@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"duanjuapp/native/core"
+	"gomovie/native/core"
 )
 
 func main() {

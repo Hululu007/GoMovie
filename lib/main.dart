@@ -144,7 +144,7 @@ class _AppBootstrapState extends State<AppBootstrap>
   }
 
   @override
-  Widget build(BuildContext context) => DuanjuApp(
+  Widget build(BuildContext context) => GoMovieApp(
     repository: repository,
     store: store,
     bootstrapError: error?.toString(),

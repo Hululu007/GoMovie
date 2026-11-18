@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" width="120" alt="小果影视图标">
+<img src="ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" width="120" alt="GoMovie图标">
 
-# 小果影视
+# GoMovie
 
 Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 
-[![Release](https://img.shields.io/github/v/release/Xanerix/guoapp?style=flat-square&color=3d4656)](../../releases)
+[![Release](https://img.shields.io/github/v/release/feyakit/GoMovie?style=flat-square&color=3d4656)](../../releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0-3d4656?style=flat-square)](LICENSE)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.9-02569B?style=flat-square&logo=flutter&logoColor=white)
 ![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS-8fa3bc?style=flat-square)
@@ -17,7 +17,9 @@ Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 
 ---
 
-本项目改编自 [fish2018](https://github.com/fish2018) 的源码。安装包内置红果站源，其余站源以模块形式在 **我的 › 模块** 安装，操作见 [使用说明](#使用说明)。
+**来源与声明**：本仓库 `feyakit/GoMovie` 是 [Xanerix/guoapp](https://github.com/Xanerix/guoapp) 的分支，后者改编自 [fish2018](https://github.com/fish2018) 的源码，沿用上游 **GPL-3.0** 许可（见 `LICENSE`），并按 GPL-3.0 保留上游署名与源码义务。本分支只做自用定制：改名 GoMovie、内置站源模块选型，不提供任何付费服务，仅供个人学习与技术研究。
+
+应用本体与站源分离：站源是模块（`.zip`），可单独安装、更新和卸载；安装包内置 14 个站源模块（见下），其余模块可从模块商店在线安装。
 
 > [!WARNING]
 > 项目处于开发阶段，不对用户数据做担保，数据可能在版本更新时丢失。
@@ -73,7 +75,7 @@ Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 | 平台 | 安装包 |
 | --- | --- |
 | Android 7.0+ | arm64-v8a / armeabi-v7a / x86_64 三种 APK，按设备架构选择（大多数手机选 arm64-v8a）；同一签名可覆盖升级，旧证书版本需卸载重装 |
-| Windows 10/11 x64 | 安装包 `*-setup.exe`，默认安装到当前用户、无需管理员权限；或便携 ZIP，解压后运行 `guoapp.exe`，保留所有 DLL 与 `data` 目录；便携版的设置、记录、缓存和默认下载都存在程序旁的 `userdata` 目录，删掉该目录则改回存到系统用户目录 |
+| Windows 10/11 x64 | 安装包 `*-setup.exe`，默认安装到当前用户、无需管理员权限；或便携 ZIP，解压后运行 `gomovie.exe`，保留所有 DLL 与 `data` 目录；便携版的设置、记录、缓存和默认下载都存在程序旁的 `userdata` 目录，删掉该目录则改回存到系统用户目录 |
 | iOS 15.1+ | 未签名 IPA，需自行签名或用 iloader 等工具侧载 |
 | macOS 12+ | 通用 dmg（Apple 芯片与 Intel），打开后拖入「应用程序」；未经公证，首次打开前需解除隔离（见下方） |
 
@@ -84,7 +86,7 @@ Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 > macOS 首次打开前在终端执行：
 >
 > ```sh
-> xattr -dr com.apple.quarantine /Applications/小果影视.app
+> xattr -dr com.apple.quarantine /Applications/GoMovie.app
 > ```
 
 ## 使用说明
@@ -93,7 +95,7 @@ Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 
 1. 逐条勾选使用条款，15 秒后可以继续。
 2. 默认只有一个「管理员」用户，拥有全部权限，不设密码。
-3. 红果随安装包内置并自动安装，打开 **发现** 就能看；其他站源需要先安装模块。
+3. 内置站源随安装包自动安装，打开 **发现** 点顶部站源名即可切换；未内置的站源到 **我的 › 模块** 在线安装。
 
 ### 站源模块
 
@@ -105,7 +107,7 @@ Flutter 多端独立影视应用，手机、平板、电脑和电视分别适配
 | --- | --- |
 | 已安装 | 开关、更新、卸载站源，点卡片查看站源会访问的域名；青空在卡片上登录账号 |
 | 在线仓库 | 模块商店，逐个「安装」或「安装全部站源」，标「限制级」的是成人内容 |
-| 内置 | 随安装包附带的模块（目前是红果） |
+| 内置 | 随安装包附带的模块：红果、韩小圈、青空、帝果、剧果、黄果视频、黄果 AI、野果、笔盒、黑桃、Hanime1、爱看机器人、禁果短剧、MissAV（共 14 个，鬼片不内置） |
 | 手动 | 「选择本地文件」安装 `.zip` 模块，或「输入下载地址」填模块 zip 的链接 |
 
 - 只能安装模块，不能直接填网站网址；没有对应模块的网站无法添加。想要新站源可以开 Issue 建议，或按 [CONTRIBUTING.md](CONTRIBUTING.md) 自己编写社区模块。
