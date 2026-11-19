@@ -26,20 +26,23 @@ func (p *tvboxProvider) Descriptor() SourceDescriptor {
 	return desc
 }
 
-func (p *tvboxProvider) client() *http.Client {
-	if p.host != nil && p.host.Client() != nil {
-		return p.host.Client()
-	}
-	return http.DefaultClient
-}
-
 func (p *tvboxProvider) getJSON(ctx context.Context, rawURL string, out any) error {
+	if p.host != nil {
+		resp, err := p.host.FetchText(ctx, TextRequest{
+			URL:       rawURL,
+			UserAgent: "okhttp/3.15",
+		})
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal([]byte(resp.Body), out)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("User-Agent", "okhttp/3.15")
-	resp, err := p.client().Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
