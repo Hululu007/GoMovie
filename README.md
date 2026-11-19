@@ -7,7 +7,7 @@
 全端跨平台独立影视播放器 · 手机、平板、电脑与电视原生适配
 
 [![Release](https://img.shields.io/github/v/release/feyakit/GoMovie?style=flat-square&color=FF2E54)](../../releases)
-[![License](https://img.shields.io/badge/license-GPL--3.0-FF9E2C?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-Non--Commercial-FF9E2C?style=flat-square)](LICENSE)
 ![Flutter](https://img.shields.io/badge/Flutter-3.47.9-02569B?style=flat-square&logo=flutter&logoColor=white)
 ![Platforms](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Windows%20%7C%20macOS%20%7C%20TV-16161B?style=flat-square)
 
@@ -115,7 +115,7 @@
 
 ## 许可
 
-本项目代码依据 [GNU GPL v3.0](https://www.gnu.org/licenses/gpl-3.0.html) 开源协议发布，完整协议文本见 [LICENSE](LICENSE)。第三方依赖库遵循各自原有开源协议。
+本项目依据 **非商用个人学习许可协议** 发布，全文见 [LICENSE](LICENSE)（仅限个人学习与技术研究，禁止商用及未经授权的二开与公开再分发）。第三方依赖库遵循各自原有开源协议。
 
 ## 开发
 
