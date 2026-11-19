@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="scripts/brand_icon.svg" width="120" alt="GoMovie Logo">
+<img src="macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_512.png" width="120" alt="GoMovie Logo">
 
 # GoMovie
 

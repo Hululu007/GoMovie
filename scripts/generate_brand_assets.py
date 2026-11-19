@@ -30,17 +30,38 @@ def render(svg):
         ).stdout
     return Image.open(io.BytesIO(bytes(png))).convert('RGBA')
 
-foreground = render(source)
+master_path = root / 'scripts/brand_icon_master.png'
 silhouette = render(source.replace(' filter="url(#shadow)"', ''))
-icon = Image.new('RGBA', (1024, 1024), '#0A0A0C')
-icon.alpha_composite(foreground)
-rounded = icon.copy()
-corners = Image.new('L', (1024, 1024), 0)
-ImageDraw.Draw(corners).rounded_rectangle((0, 0, 1023, 1023), radius=236, fill=255)
-rounded.putalpha(corners)
-icon = icon.convert('RGB')
-adaptive = Image.new('RGBA', (1536, 1536))
-adaptive.paste(foreground, (256, 256))
+
+if master_path.exists():
+    master = Image.open(master_path).convert('RGBA')
+    # Crop squircle with rim for rounded desktop/Android legacy/TV icons
+    squircle_crop = master.crop((128, 128, 896, 896)).resize((1024, 1024), Image.Resampling.LANCZOS)
+    rounded = squircle_crop.copy()
+    corners = Image.new('L', (1024, 1024), 0)
+    ImageDraw.Draw(corners).rounded_rectangle((0, 0, 1023, 1023), radius=236, fill=255)
+    rounded.putalpha(corners)
+    # Full-bleed RGB icon for iOS (iOS applies its own squircle mask)
+    icon = master.crop((136, 136, 888, 888)).resize((1024, 1024), Image.Resampling.LANCZOS).convert('RGB')
+    # Adaptive foreground: central 880x880 artwork with soft rounded mask blending into #141418
+    fg_art = master.crop((170, 170, 854, 854)).resize((960, 960), Image.Resampling.LANCZOS)
+    fg_mask = Image.new('L', (960, 960), 0)
+    ImageDraw.Draw(fg_mask).ellipse((20, 20, 940, 940), fill=255)
+    fg_art.putalpha(fg_mask)
+    adaptive = Image.new('RGBA', (1536, 1536))
+    adaptive.paste(fg_art, (288, 288), fg_art)
+else:
+    foreground = render(source)
+    icon = Image.new('RGBA', (1024, 1024), '#0A0A0C')
+    icon.alpha_composite(foreground)
+    rounded = icon.copy()
+    corners = Image.new('L', (1024, 1024), 0)
+    ImageDraw.Draw(corners).rounded_rectangle((0, 0, 1023, 1023), radius=236, fill=255)
+    rounded.putalpha(corners)
+    icon = icon.convert('RGB')
+    adaptive = Image.new('RGBA', (1536, 1536))
+    adaptive.paste(foreground, (256, 256))
+
 monochrome = Image.new('RGBA', (1536, 1536))
 monochrome.paste(silhouette, (256, 256))
 
