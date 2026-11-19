@@ -155,6 +155,7 @@ jobs:
           retention-days: 14
 
   windows:
+    if: false
     needs: prepare
     runs-on: windows-latest
     timeout-minutes: 45
@@ -186,6 +187,7 @@ jobs:
           retention-days: 14
 
   ios:
+    if: false
     needs: prepare
     runs-on: macos-latest
     timeout-minutes: 60
@@ -219,6 +221,7 @@ jobs:
           retention-days: 14
 
   macos:
+    if: false
     needs: prepare
     runs-on: macos-latest
     timeout-minutes: 60
@@ -252,7 +255,7 @@ jobs:
           retention-days: 14
 
   release:
-    needs: [checks, prepare, android, windows, ios, macos]
+    needs: [checks, prepare, android]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
