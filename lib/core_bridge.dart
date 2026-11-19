@@ -151,6 +151,12 @@ abstract class AppRepository {
   Future<Map<String, dynamic>> tvboxSubscribe(String url) async =>
       throw AppFailure('当前环境不支持订阅接口');
   Future<Map<String, dynamic>> tvboxClear() async => const {};
+  Future<String> sourceChallengeUrl(String source) async => '';
+  Future<void> registerWebViewBridge({
+    required int port,
+    required String url,
+    required String source,
+  }) async {}
   Future<List<String>> suggestions(String source, String query) async =>
       const [];
   Future<Map<String, dynamic>> storage() async => {};
@@ -930,6 +936,26 @@ class NativeRepository extends AppRepository {
       _installSources(result['sources']);
     }
     return result;
+  }
+
+  @override
+  Future<String> sourceChallengeUrl(String source) async {
+    final result = await _call({'action': 'sourceChallengeUrl', 'source': source});
+    return result['url'] as String? ?? '';
+  }
+
+  @override
+  Future<void> registerWebViewBridge({
+    required int port,
+    required String url,
+    required String source,
+  }) async {
+    await _call({
+      'action': 'webViewBridge',
+      'index': port,
+      'url': url,
+      'source': source,
+    });
   }
 
   @override

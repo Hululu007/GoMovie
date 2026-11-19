@@ -6,6 +6,7 @@ import '../../drama_feed.dart';
 import '../../explore_feed.dart';
 import '../../local_store.dart';
 import '../../models.dart';
+import '../../webview_bridge.dart';
 import '../app_scope.dart';
 import '../cover_blur.dart';
 import '../shell/app_shell.dart';
@@ -340,13 +341,30 @@ class ExplorePageState extends State<ExplorePage> {
       return const StatusView.loading(key: ValueKey('loading'));
     }
     if (feed.error.isNotEmpty) {
+      final isChallenge =
+          WebViewBridge.supported && WebViewBridge.isChallengeError(feed.error);
       return StatusView(
         key: const ValueKey('error'),
-        title: '暂时无法加载',
+        title: isChallenge ? '需要完成人机验证' : '暂时无法加载',
         message: feed.error,
-        icon: Icons.cloud_off_rounded,
-        action: '重试',
-        onAction: () => feed.reload(force: true),
+        icon: isChallenge ? Icons.verified_user_outlined : Icons.cloud_off_rounded,
+        action: isChallenge ? '完成人机验证' : '重试',
+        onAction: () async {
+          if (isChallenge) {
+            final source = _explore?.source ?? '';
+            if (source.isEmpty) return;
+            final ok = await WebViewBridge.verifySource(
+              AppScope.of(context).repository,
+              source,
+            );
+            if (!mounted) return;
+            if (ok) {
+              feed.reload(force: true);
+            }
+            return;
+          }
+          feed.reload(force: true);
+        },
       );
     }
     return StatusView(

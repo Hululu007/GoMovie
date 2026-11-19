@@ -75,6 +75,7 @@ class MainActivity : FlutterActivity() {
     private var permissionResult: MethodChannel.Result? = null
     private var textInput: TextInputBridge? = null
     private var mediaControls: MediaControls? = null
+    private var webViewBridge: WebViewBridge? = null
     private var headroomReadAt = 0L
     private var thermalHeadroom: Double? = null
     private var deviceChannel: MethodChannel? = null
@@ -335,6 +336,7 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         textInput = TextInputBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         mediaControls = MediaControls(this, flutterEngine.dartExecutor.binaryMessenger)
+        webViewBridge = WebViewBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         deviceChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gomovie/device")
             .also { channel ->
                 channel.setMethodCallHandler { call, result ->

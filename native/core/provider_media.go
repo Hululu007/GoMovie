@@ -122,6 +122,16 @@ func (d *Downloader) finishProviderMedia(ctx context.Context, media ProviderMedi
 }
 
 func (d *Downloader) fetchProviderRequest(ctx context.Context, rawURL, referer string, payload []byte) (string, error) {
+	if payload == nil {
+		if html, finalURL, handled, err := webViewBridgeFetch(ctx, rawURL); handled {
+			if err == nil {
+				if responses, ok := ctx.Value(playbackResponseURLsKey{}).(*playbackResponseURLs); ok && responses != nil {
+					responses.values.Store(rawURL, finalURL)
+				}
+			}
+			return html, err
+		}
+	}
 	retries := d.cfg.Retries
 	if retries <= 0 {
 		retries = 3

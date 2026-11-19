@@ -45,7 +45,7 @@ func catalogResponseBlockReason(response *http.Response, body []byte) string {
 	if strings.Contains(page, "cloudflare") && (strings.Contains(page, "sorry, you have been blocked") || strings.Contains(page, "you are unable to access")) {
 		reason = "Cloudflare 拒绝了当前请求"
 	} else if strings.EqualFold(response.Header.Get("Cf-Mitigated"), "challenge") || strings.Contains(page, "_cf_chl_opt") || strings.Contains(page, "<title>just a moment") && strings.Contains(page, "cloudflare") {
-		reason = "该站已开启 Cloudflare 人机验证，应用内无法通过；请在浏览器中打开该站点手动完成验证后再试"
+		reason = "该站已开启 Cloudflare 人机验证，请点击「完成人机验证」通过后再试"
 	}
 	return reason
 }
