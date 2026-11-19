@@ -351,7 +351,7 @@ class ExplorePageState extends State<ExplorePage> {
         action: isChallenge ? '完成人机验证' : '重试',
         onAction: () async {
           if (isChallenge) {
-            final source = _explore?.source ?? '';
+            final source = _explore?.source.id ?? '';
             if (source.isEmpty) return;
             final ok = await WebViewBridge.verifySource(
               AppScope.of(context).repository,
