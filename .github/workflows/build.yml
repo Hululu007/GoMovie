@@ -187,7 +187,6 @@ jobs:
           retention-days: 14
 
   ios:
-    if: false
     needs: prepare
     runs-on: macos-latest
     timeout-minutes: 60
@@ -255,7 +254,7 @@ jobs:
           retention-days: 14
 
   release:
-    needs: [checks, prepare, android]
+    needs: [checks, prepare, android, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -275,7 +274,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > notes.md <<EOF
-          版本 ${VERSION}。安装包内置红果站源，其余站源在 设置 › 站源 › 模块管理 的模块商店安装。
+          版本 ${VERSION}。安装包内置 14 个站源模块，支持饭太硬 / TVBox 订阅与夸克网盘分享直链播放。
 
           Android：
           - *-arm64-v8a.apk：适用于较新的安卓设备
