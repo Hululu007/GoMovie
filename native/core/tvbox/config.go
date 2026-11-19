@@ -80,7 +80,7 @@ func ParseConfig(raw []byte) (*Config, error) {
 	if text == "" {
 		return nil, errors.New("订阅内容为空")
 	}
-	if idx := strings.Index(text, "**"); idx >= 0 && !strings.HasPrefix(text, "{") {
+	if idx := strings.LastIndex(text, "**"); idx >= 0 && !strings.HasPrefix(text, "{") {
 		encoded := strings.TrimSpace(text[idx+2:])
 		if decoded, err := decodeBase64Flexible(encoded); err == nil {
 			text = string(decoded)
@@ -106,13 +106,14 @@ func classifySite(s Site) (SiteKind, bool) {
 	api := strings.TrimSpace(s.API)
 	lowerAPI := strings.ToLower(api)
 	isHTTP := strings.HasPrefix(lowerAPI, "http://") || strings.HasPrefix(lowerAPI, "https://")
+	isJS := strings.HasSuffix(lowerAPI, ".js") || strings.Contains(lowerAPI, ".js?")
 	switch s.Type {
 	case 0, 1:
 		return KindCMS, isHTTP
 	case 4:
-		return KindT4, isHTTP
+		return KindT4, isHTTP && !isJS
 	default:
-		if isHTTP && !strings.HasPrefix(lowerAPI, "csp_") {
+		if isHTTP && !isJS && !strings.HasPrefix(lowerAPI, "csp_") {
 			return KindT4, true
 		}
 		return KindJar, false
