@@ -19,23 +19,46 @@ const (
 	KindJar SiteKind = "jar"
 )
 
+type FlexInt int
+
+func (f *FlexInt) UnmarshalJSON(data []byte) error {
+	s := strings.TrimSpace(string(data))
+	if s == "" || s == "null" {
+		*f = 0
+		return nil
+	}
+	if strings.HasPrefix(s, `"`) && strings.HasSuffix(s, `"`) {
+		s = strings.Trim(s, `"`)
+	}
+	if s == "" {
+		*f = 0
+		return nil
+	}
+	var n int
+	if _, err := fmt.Sscanf(s, "%d", &n); err != nil {
+		return nil
+	}
+	*f = FlexInt(n)
+	return nil
+}
+
 type Site struct {
 	Key         string   `json:"key"`
 	Name        string   `json:"name"`
-	Type        int      `json:"type"`
+	Type        FlexInt  `json:"type"`
 	API         string   `json:"api"`
-	Searchable  int      `json:"searchable"`
-	QuickSearch int      `json:"quickSearch"`
-	Filterable  int      `json:"filterable"`
+	Searchable  FlexInt  `json:"searchable"`
+	QuickSearch FlexInt  `json:"quickSearch"`
+	Filterable  FlexInt  `json:"filterable"`
 	Ext         any      `json:"ext,omitempty"`
 	Kind        SiteKind `json:"kind"`
 	Supported   bool     `json:"supported"`
 }
 
 type ParseItem struct {
-	Name string `json:"name"`
-	Type int    `json:"type"`
-	URL  string `json:"url"`
+	Name string  `json:"name"`
+	Type FlexInt `json:"type"`
+	URL  string  `json:"url"`
 }
 
 type Config struct {
