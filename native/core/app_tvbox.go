@@ -38,14 +38,13 @@ func (engine *nativeEngine) tvboxConfigPath() string {
 
 func (engine *nativeEngine) tvboxEnsureLoaded() {
 	tvboxMu.Lock()
+	defer tvboxMu.Unlock()
 	if tvboxLoaded {
-		tvboxMu.Unlock()
 		return
 	}
-	path := engine.tvboxConfigPath()
 	tvboxLoaded = true
-	tvboxMu.Unlock()
 
+	path := engine.tvboxConfigPath()
 	if path == "" {
 		return
 	}
@@ -57,10 +56,8 @@ func (engine *nativeEngine) tvboxEnsureLoaded() {
 	if err := json.Unmarshal(raw, &saved); err != nil {
 		return
 	}
-	tvboxMu.Lock()
-	defer tvboxMu.Unlock()
+	saved.RegisteredIDs = registerTVBoxSitesLocked(saved.Sites)
 	tvboxState = &saved
-	registerTVBoxSitesLocked(saved.Sites)
 }
 
 func makeTVBoxSourceID(site tvbox.Site) string {

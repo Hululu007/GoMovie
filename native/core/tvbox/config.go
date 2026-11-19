@@ -85,6 +85,10 @@ func ParseConfig(raw []byte) (*Config, error) {
 		if decoded, err := decodeBase64Flexible(encoded); err == nil {
 			text = string(decoded)
 		}
+	} else if !strings.HasPrefix(text, "{") && !strings.HasPrefix(text, "//") && !strings.HasPrefix(text, "/*") {
+		if decoded, err := decodeBase64Flexible(text); err == nil && strings.Contains(string(decoded), "{") {
+			text = string(decoded)
+		}
 	}
 	cleaned := stripJSONComments(text)
 	var cfg Config

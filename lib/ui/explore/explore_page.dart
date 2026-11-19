@@ -124,15 +124,22 @@ class ExplorePageState extends State<ExplorePage> {
     );
     controller.dispose();
     if (!mounted || url == null || url.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('正在解析网盘分享...'),
+        duration: Duration(seconds: 15),
+      ),
+    );
     try {
       final drama = await AppScope.of(context).repository.netdiskOpenShare(url);
       if (!mounted) return;
+      messenger.hideCurrentSnackBar();
       _open(drama);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 

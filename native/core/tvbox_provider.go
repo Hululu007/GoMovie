@@ -27,6 +27,7 @@ func (p *tvboxProvider) Descriptor() SourceDescriptor {
 }
 
 func (p *tvboxProvider) getJSON(ctx context.Context, rawURL string, out any) error {
+	var raw []byte
 	if p.host != nil {
 		resp, err := p.host.FetchText(ctx, TextRequest{
 			URL:       rawURL,
@@ -35,26 +36,32 @@ func (p *tvboxProvider) getJSON(ctx context.Context, rawURL string, out any) err
 		if err != nil {
 			return err
 		}
-		return json.Unmarshal([]byte(resp.Body), out)
+		raw = []byte(resp.Body)
+	} else {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("User-Agent", "okhttp/3.15")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return fmt.Errorf("站源返回 HTTP %d", resp.StatusCode)
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+		if err != nil {
+			return err
+		}
+		raw = body
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return err
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || strings.HasPrefix(trimmed, "<") {
+		return errors.New("站源返回非 JSON 内容（可能已失效或被拦截）")
 	}
-	req.Header.Set("User-Agent", "okhttp/3.15")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("站源返回 HTTP %d", resp.StatusCode)
-	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(body, out)
+	return json.Unmarshal([]byte(trimmed), out)
 }
 
 func (p *tvboxProvider) buildAPIURL(params url.Values) (string, error) {
@@ -63,6 +70,11 @@ func (p *tvboxProvider) buildAPIURL(params url.Values) (string, error) {
 		return "", err
 	}
 	q := u.Query()
+	if p.site.Type == 4 {
+		if ext, ok := p.site.Ext.(string); ok && strings.TrimSpace(ext) != "" && q.Get("extend") == "" {
+			q.Set("extend", strings.TrimSpace(ext))
+		}
+	}
 	for k, vals := range params {
 		for _, v := range vals {
 			q.Set(k, v)
@@ -220,7 +232,7 @@ func (p *tvboxProvider) Search(ctx context.Context, page int, query string) ([]D
 	}
 	dramas := p.toDramas(resp.List)
 	pageCount := anyToInt(resp.PageCount)
-	hasMore := pageCount > page
+	hasMore := pageCount > page || (pageCount == 0 && len(dramas) >= 20)
 	return dramas, hasMore, nil
 }
 
