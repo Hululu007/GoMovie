@@ -8,6 +8,7 @@ import '../../drama_feed.dart';
 import '../../local_store.dart';
 import '../../models.dart';
 import '../../source_catalog.dart';
+import '../../webview_bridge.dart';
 import '../app_scope.dart';
 import '../detail/detail_page.dart';
 import '../shell/app_shell.dart';
@@ -202,13 +203,31 @@ class _SearchPageState extends State<SearchPage> {
         );
       }
       if (results.error.isNotEmpty) {
+        final isChallenge =
+            WebViewBridge.supported &&
+            WebViewBridge.isChallengeError(results.error);
         return StatusView(
           key: const ValueKey('error'),
-          title: '搜索失败',
+          title: isChallenge ? '需要完成人机验证' : '搜索失败',
           message: results.error,
-          icon: Icons.cloud_off_rounded,
-          action: '重试',
-          onAction: () => results.reload(),
+          icon: isChallenge
+              ? Icons.verified_user_outlined
+              : Icons.cloud_off_rounded,
+          action: isChallenge ? '完成人机验证' : '重试',
+          onAction: () async {
+            if (isChallenge) {
+              final ok = await WebViewBridge.verifySource(
+                _repository,
+                widget.source.id,
+              );
+              if (!mounted) return;
+              if (ok) {
+                results.reload();
+              }
+              return;
+            }
+            results.reload();
+          },
         );
       }
       return StatusView(

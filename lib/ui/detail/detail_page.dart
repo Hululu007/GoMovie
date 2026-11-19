@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../drama_details.dart';
 import '../../local_store.dart';
 import '../../models.dart';
+import '../../webview_bridge.dart';
 import '../app_scope.dart';
 import '../downloads/download_picker_page.dart';
 import '../player/playback_handle.dart';
@@ -1107,13 +1108,35 @@ class _DetailPageState extends State<DetailPage> {
       );
 
   Widget _episodeError(DramaDetails details, bool autofocus) {
+    final error = details.error;
+    final isChallenge =
+        error != null &&
+        WebViewBridge.supported &&
+        WebViewBridge.isChallengeError(error);
     return StatusView(
       key: const ValueKey('error'),
-      title: details.error != null ? '剧集信息暂时不可用' : '暂时没有可播放的集数',
-      message: details.error ?? '可以更新剧集信息后重试。',
-      icon: Icons.error_outline_rounded,
-      action: '重试',
-      onAction: details.load,
+      title: isChallenge
+          ? '需要完成人机验证'
+          : (error != null ? '剧集信息暂时不可用' : '暂时没有可播放的集数'),
+      message: error ?? '可以更新剧集信息后重试。',
+      icon: isChallenge
+          ? Icons.verified_user_outlined
+          : Icons.error_outline_rounded,
+      action: isChallenge ? '完成人机验证' : '重试',
+      onAction: () async {
+        if (isChallenge) {
+          final ok = await WebViewBridge.verifySource(
+            AppScope.of(context).repository,
+            widget.drama.source,
+          );
+          if (!mounted) return;
+          if (ok) {
+            details.load();
+          }
+          return;
+        }
+        details.load();
+      },
       autofocus: autofocus,
     );
   }
