@@ -27,14 +27,12 @@ func (engine *nativeEngine) setWebViewBridge(port int, rawHost, source string) m
 	}
 	if source != "" {
 		if desc, ok := registeredDescriptor(canonicalProviderSource(source)); ok {
+			if h := normalizeBridgeHost(desc.BaseURL); h != "" {
+				hosts = append(hosts, h)
+			}
 			for _, alias := range desc.Aliases {
 				if h := normalizeBridgeHost(alias); h != "" {
 					hosts = append(hosts, h)
-				}
-			}
-			for _, h := range desc.Hosts {
-				if clean := normalizeBridgeHost(h); clean != "" && !strings.HasPrefix(clean, "*.") {
-					hosts = append(hosts, clean)
 				}
 			}
 		}
@@ -75,7 +73,10 @@ func (engine *nativeEngine) sourceChallengeURL(source string) string {
 		}
 	}
 	if desc, ok := registeredDescriptor(id); ok {
-		for _, h := range desc.Hosts {
+		if base := strings.TrimSpace(desc.BaseURL); base != "" {
+			return base
+		}
+		for _, h := range desc.Aliases {
 			h = strings.TrimSpace(h)
 			if h != "" && !strings.HasPrefix(h, "*.") {
 				return "https://" + h
