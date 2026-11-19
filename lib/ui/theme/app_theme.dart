@@ -36,17 +36,32 @@ abstract final class AppTheme {
       seedColor: seed,
       brightness: brightness,
     );
-    final scheme = pureBlack && brightness == Brightness.dark
-        ? seeded.copyWith(
-            surface: Colors.black,
-            surfaceDim: Colors.black,
-            surfaceContainerLowest: Colors.black,
-            surfaceContainerLow: const Color(0xFF0B0B0B),
-            surfaceContainer: const Color(0xFF121212),
-            surfaceContainerHigh: const Color(0xFF1A1A1A),
-            surfaceContainerHighest: const Color(0xFF242424),
-          )
-        : seeded;
+    final scheme = switch ((brightness, pureBlack, seed.toARGB32())) {
+      (Brightness.dark, true, _) => seeded.copyWith(
+          surface: Colors.black,
+          surfaceDim: Colors.black,
+          surfaceContainerLowest: Colors.black,
+          surfaceContainerLow: const Color(0xFF0B0B0B),
+          surfaceContainer: const Color(0xFF121212),
+          surfaceContainerHigh: const Color(0xFF1A1A1A),
+          surfaceContainerHighest: const Color(0xFF242424),
+        ),
+      (Brightness.dark, false, 0xFFFF2E54) => seeded.copyWith(
+          primary: const Color(0xFFFF2E54),
+          onPrimary: Colors.white,
+          tertiary: const Color(0xFFFF9E2C),
+          onTertiary: const Color(0xFF1A0E00),
+          surface: const Color(0xFF0A0A0C),
+          surfaceDim: const Color(0xFF070709),
+          surfaceContainerLowest: const Color(0xFF0A0A0C),
+          surfaceContainerLow: const Color(0xFF121216),
+          surfaceContainer: const Color(0xFF16161B),
+          surfaceContainerHigh: const Color(0xFF1E1E24),
+          surfaceContainerHighest: const Color(0xFF27272F),
+          outlineVariant: const Color(0xFF2B2B33),
+        ),
+      _ => seeded,
+    };
     final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,

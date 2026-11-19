@@ -163,7 +163,7 @@ void main() {
       expect(store.playbackPreferences.autoPictureInPicture, isFalse);
       expect(store.displayMode, 'auto');
       expect(store.themeMode, 'system');
-      expect(store.themeColor, ThemeColor.orange);
+      expect(store.themeColor, ThemeColor.crimson);
       expect(store.sourceEnabled('hongguo'), isTrue);
       expect(store.sourceEnabled('huangdou'), isTrue);
     });

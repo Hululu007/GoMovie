@@ -248,7 +248,7 @@ class _GoMovieAppState extends State<GoMovieApp> with WidgetsBindingObserver {
         ? _systemColor
         : null;
     final seed =
-        systemColor ?? Color((store?.themeColor ?? ThemeColor.orange).seed);
+        systemColor ?? Color((store?.themeColor ?? ThemeColor.crimson).seed);
     final pureBlack = store?.pureBlack ?? false;
     if ((seed, television, pureBlack) != _themeKey) {
       _themeKey = (seed, television, pureBlack);
