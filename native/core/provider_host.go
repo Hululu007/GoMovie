@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -142,6 +143,14 @@ func (d *Downloader) Fetch(ctx context.Context, input HTTPRequest) (HTTPResponse
 	for name, value := range input.Header {
 		request.Header.Set(name, value)
 	}
+	if bridgeCookie, bridgeUA := webViewBridgeHeaders(input.URL); bridgeCookie != "" || bridgeUA != "" {
+		if bridgeCookie != "" && request.Header.Get("Cookie") == "" {
+			request.Header.Set("Cookie", bridgeCookie)
+		}
+		if bridgeUA != "" && request.Header.Get("User-Agent") == "" {
+			request.Header.Set("User-Agent", bridgeUA)
+		}
+	}
 	if input.Ticket != 0 {
 		release, reserved := d.takeReservation(input.Ticket)
 		if !reserved {
@@ -185,6 +194,18 @@ func (d *Downloader) Fetch(ctx context.Context, input HTTPRequest) (HTTPResponse
 	result := HTTPResponse{Status: response.StatusCode, Header: response.Header.Clone(), Blocked: blocked}
 	if !oversized {
 		result.Body = data
+	}
+	if blocked && (input.Method == "" || strings.EqualFold(input.Method, http.MethodGet)) && len(input.Body) == 0 {
+		if html, _, handled, bridgeErr := webViewBridgeFetch(ctx, input.URL); handled {
+			if bridgeErr == nil {
+				return HTTPResponse{
+					Status: http.StatusOK,
+					Header: http.Header{"Content-Type": []string{"text/html; charset=utf-8"}},
+					Body:   []byte(html),
+				}, nil
+			}
+			return HTTPResponse{Status: response.StatusCode, Header: response.Header.Clone(), Blocked: true}, bridgeErr
+		}
 	}
 	if slices.Contains(input.AcceptJSONStatus, response.StatusCode) && !oversized && !blocked && json.Valid(data) {
 		return result, nil

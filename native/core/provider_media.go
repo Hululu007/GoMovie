@@ -175,9 +175,12 @@ func (d *Downloader) fetchProviderRequest(ctx context.Context, rawURL, referer s
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", "application/json")
 			}
+			bridgeCookie, bridgeUA := webViewBridgeHeaders(candidate)
 			req.Header.Set("User-Agent", UserAgent)
 			if agent, ok := ctx.Value(providerTextUserAgentKey{}).(string); ok && agent != "" {
 				req.Header.Set("User-Agent", agent)
+			} else if bridgeUA != "" {
+				req.Header.Set("User-Agent", bridgeUA)
 			}
 			if ProviderSourceForURL(rawURL) != "" {
 				req.Header.Set("Referer", providerRefererForURL(candidate, referer))
@@ -187,6 +190,8 @@ func (d *Downloader) fetchProviderRequest(ctx context.Context, rawURL, referer s
 			req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
 			if cookie, ok := ctx.Value(providerTextCookieKey{}).(string); ok && cookie != "" {
 				req.Header.Set("Cookie", cookie)
+			} else if bridgeCookie != "" {
+				req.Header.Set("Cookie", bridgeCookie)
 			}
 			if noCache, _ := ctx.Value(providerTextNoCacheKey{}).(bool); noCache {
 				req.Header.Set("Cache-Control", "no-cache")

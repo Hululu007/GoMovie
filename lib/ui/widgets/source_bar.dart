@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
+import '../theme/app_theme.dart';
 import 'bar_button.dart';
-import 'page_header.dart';
 import 'search_field.dart';
 
 class SourceBar extends StatelessWidget {
@@ -34,40 +34,61 @@ class SourceBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final form = AppScope.formFactorOf(context);
     final hint = '在 $source 中搜索';
-    final switcher = Builder(
-      builder: (anchor) => BarButton(
-        icon: Icons.public_rounded,
-        tooltip: '切换站源',
-        onPressed: () => onSwitchSource(anchor),
-      ),
-    );
     final search = BarButton(
       icon: Icons.search_rounded,
       tooltip: hint,
       onPressed: onOpenSearch,
     );
-    return switch (form) {
-      FormFactor.phone => PageHeader(
-        title: source,
-        actions: [...leading, switcher, search, ...actions],
-      ),
-      FormFactor.pad || FormFactor.window => PageHeader(
-        title: source,
-        actions: [
-          ...leading,
-          switcher,
-          const SizedBox(width: 4),
-          _RecentSearchField(
-            width: MediaQuery.sizeOf(context).width >= 900 ? 320 : 240,
-            hint: hint,
-            controller: searchController,
-            recent: recentSearches,
-            onSubmitted: onSearchSubmitted,
-            onForget: onForgetSearch,
+    final pill = Expanded(
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Builder(
+          builder: (anchor) => _SourceSwitcherPill(
+            label: source,
+            onTap: () => onSwitchSource(anchor),
           ),
-          const SizedBox(width: 4),
-          ...actions,
-        ],
+        ),
+      ),
+    );
+    return switch (form) {
+      FormFactor.phone => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              ...leading,
+              if (leading.isNotEmpty) const SizedBox(width: 6),
+              pill,
+              search,
+              ...actions,
+            ],
+          ),
+        ),
+      ),
+      FormFactor.pad || FormFactor.window => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: [
+              ...leading,
+              if (leading.isNotEmpty) const SizedBox(width: 6),
+              pill,
+              const SizedBox(width: 8),
+              _RecentSearchField(
+                width: MediaQuery.sizeOf(context).width >= 900 ? 320 : 240,
+                hint: hint,
+                controller: searchController,
+                recent: recentSearches,
+                onSubmitted: onSearchSubmitted,
+                onForget: onForgetSearch,
+              ),
+              const SizedBox(width: 4),
+              ...actions,
+            ],
+          ),
+        ),
       ),
       FormFactor.television => SizedBox(
         height: 48,
@@ -80,13 +101,83 @@ class SourceBar extends StatelessWidget {
               source,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
-            switcher,
+            Builder(
+              builder: (anchor) => BarButton(
+                icon: Icons.public_rounded,
+                tooltip: '切换站源',
+                onPressed: () => onSwitchSource(anchor),
+              ),
+            ),
             search,
             ...actions,
           ],
         ),
       ),
     };
+  }
+}
+
+class _SourceSwitcherPill extends StatelessWidget {
+  const _SourceSwitcherPill({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
+      label: '切换站源 $label',
+      child: Tooltip(
+        message: '切换站源',
+        child: Material(
+          color: colors.surfaceContainerHigh.withValues(alpha: 0.72),
+          shape: StadiumBorder(
+            side: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: 0.55),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.brandGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: SizedBox(width: 8, height: 8),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 18,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

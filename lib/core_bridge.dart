@@ -156,6 +156,8 @@ abstract class AppRepository {
     required int port,
     required String url,
     required String source,
+    String cookies = '',
+    String userAgent = '',
   }) async {}
   Future<List<String>> suggestions(String source, String query) async =>
       const [];
@@ -949,12 +951,16 @@ class NativeRepository extends AppRepository {
     required int port,
     required String url,
     required String source,
+    String cookies = '',
+    String userAgent = '',
   }) async {
     await _call({
       'action': 'webViewBridge',
       'index': port,
       'url': url,
       'source': source,
+      'token': cookies,
+      'device': userAgent,
     });
   }
 

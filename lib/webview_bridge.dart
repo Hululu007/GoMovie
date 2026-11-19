@@ -11,7 +11,7 @@ abstract final class WebViewBridge {
   static HttpServer? _server;
 
   static bool get supported =>
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+      !kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
 
   static bool isChallengeError(String message) =>
       message.contains('Cloudflare 人机验证') ||
@@ -67,8 +67,16 @@ abstract final class WebViewBridge {
       {'url': url},
     );
     if (res?['ok'] != true) return false;
+    final cookies = res?['cookies'] as String? ?? '';
+    final userAgent = res?['userAgent'] as String? ?? '';
     final port = await _ensureServer();
-    await repo.registerWebViewBridge(port: port, url: url, source: source);
+    await repo.registerWebViewBridge(
+      port: port,
+      url: url,
+      source: source,
+      cookies: cookies,
+      userAgent: userAgent,
+    );
     return true;
   }
 }

@@ -94,6 +94,7 @@ func registerTVBoxSitesLocked(sites []tvbox.Site) []string {
 			Description:    "订阅源（" + string(siteCopy.Kind) + "）",
 			Group:          "tvbox",
 			GroupName:      "饭太硬订阅",
+			BaseURL:        siteCopy.API,
 			SkipVIPPrompt:  true,
 			NoHostRotation: true,
 		}, func(host Host) Provider {

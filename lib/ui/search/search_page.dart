@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,11 +43,32 @@ class _SearchPageState extends State<SearchPage> {
   late SourceCatalog _catalog;
   DramaFeed? _results;
   String _submitted = '';
+  bool _aggregate = false;
+  int _searchGen = 0;
+  bool _aggLoading = false;
+  int _aggDone = 0;
+  int _aggTotal = 0;
+  List<Drama> _aggItems = const [];
+  final Map<String, String> _aggErrors = {};
+  String _aggSourceFilter = '';
   List<String> _suggestions = const [];
   Timer? _debounce;
   int _suggestion = 0;
   final _shownSuggestions = <Object>{};
   bool _ready = false;
+
+  List<SourceSite> get _searchableSources {
+    final list = [
+      for (final site in widget.store.sources)
+        if (site.onlineSearch && site.id != 'quark') site,
+    ];
+    if (widget.source.onlineSearch &&
+        widget.source.id != 'quark' &&
+        !list.any((site) => site.id == widget.source.id)) {
+      list.insert(0, widget.source);
+    }
+    return list;
+  }
 
   @override
   void didChangeDependencies() {
@@ -62,6 +84,7 @@ class _SearchPageState extends State<SearchPage> {
   void dispose() {
     _debounce?.cancel();
     _suggestion++;
+    _searchGen++;
     unawaited(_repository.cancelSuggestions());
     _results?.dispose();
     _controller.dispose();
@@ -81,8 +104,27 @@ class _SearchPageState extends State<SearchPage> {
     _focus.unfocus();
     _debounce?.cancel();
     _suggestion++;
+    _searchGen++;
     unawaited(widget.store.rememberSearch(query).catchError((Object _) {}));
     _results?.dispose();
+    _results = null;
+    if (_aggregate) {
+      final sources = _searchableSources;
+      setState(() {
+        _submitted = query;
+        _suggestions = const [];
+        _aggItems = const [];
+        _aggErrors.clear();
+        _aggSourceFilter = '';
+        _aggDone = 0;
+        _aggTotal = sources.length;
+        _aggLoading = sources.isNotEmpty;
+      });
+      if (sources.isNotEmpty) {
+        unawaited(_runAggregate(query, sources, _searchGen));
+      }
+      return;
+    }
     final results = _results = DramaFeed(
       load: (page, _) => _catalog.search(query, page: page),
     )..addListener(() => setState(() {}));
@@ -90,7 +132,68 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       _submitted = query;
       _suggestions = const [];
+      _aggLoading = false;
+      _aggItems = const [];
+      _aggErrors.clear();
+      _aggSourceFilter = '';
+      _aggDone = 0;
+      _aggTotal = 0;
     });
+  }
+
+  Future<void> _runAggregate(
+    String query,
+    List<SourceSite> sources,
+    int gen,
+  ) async {
+    var cursor = 0;
+    final seen = <String>{};
+    final workerCount = math.min(6, sources.length);
+    Future<void> worker() async {
+      while (cursor < sources.length) {
+        if (!mounted || gen != _searchGen) return;
+        final site = sources[cursor++];
+        try {
+          final page = await _repository.catalog(
+            site.id,
+            query: query,
+            page: 1,
+          );
+          if (!mounted || gen != _searchGen) return;
+          final added = <Drama>[];
+          for (final item in page.items) {
+            final key = '${item.source}:${item.id}';
+            if (seen.add(key)) {
+              added.add(item);
+            }
+          }
+          setState(() {
+            _aggDone++;
+            if (added.isNotEmpty) {
+              _aggItems = [..._aggItems, ...added];
+            }
+          });
+        } catch (error) {
+          if (!mounted || gen != _searchGen) return;
+          setState(() {
+            _aggDone++;
+            _aggErrors[site.id] = '$error';
+          });
+        }
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < workerCount; i++) worker()]);
+    if (!mounted || gen != _searchGen) return;
+    setState(() => _aggLoading = false);
+  }
+
+  void _setAggregate(bool aggregate) {
+    if (_aggregate == aggregate) return;
+    setState(() => _aggregate = aggregate);
+    if (_submitted.isNotEmpty) {
+      _submit(_submitted);
+    }
   }
 
   void _changed(String text) {
@@ -118,18 +221,24 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final searchable = _searchableSources;
+    final canAggregate = searchable.length > 1;
+    final hint = _aggregate && canAggregate
+        ? '在全网 ${searchable.length} 个站源中聚合搜索'
+        : '在 ${widget.source.name} 中搜索';
     final field = SearchField(
-      hint: '在 ${widget.source.name} 中搜索',
+      hint: hint,
       controller: _controller,
       focusNode: _focus,
       autofocus: widget.query.isEmpty,
       onChanged: _changed,
       onSubmitted: _submit,
       letterKeyboard: widget.store.televisionKeyboard,
-      matches: widget.source.searchSuggestions
+      matches: widget.source.searchSuggestions && !_aggregate
           ? (query) => _repository.suggestions(widget.source.id, query)
           : null,
     );
+    final modeBar = canAggregate ? _modeBar(context, searchable.length) : null;
     if (AppScope.of(context).television) {
       return Scaffold(
         body: Column(
@@ -143,6 +252,16 @@ class _SearchPageState extends State<SearchPage> {
               ),
               child: field,
             ),
+            if (modeBar != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  televisionInset,
+                  10,
+                  televisionInset,
+                  0,
+                ),
+                child: modeBar,
+              ),
             Expanded(child: FadeSwitcher(child: _body(context))),
           ],
         ),
@@ -156,8 +275,64 @@ class _SearchPageState extends State<SearchPage> {
       body: SafeArea(
         top: false,
         bottom: false,
-        child: FadeSwitcher(child: _body(context)),
+        child: Column(
+          children: [
+            if (modeBar != null)
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppScope.formFactorOf(context) == FormFactor.phone ? 16 : 24,
+                  6,
+                  AppScope.formFactorOf(context) == FormFactor.phone ? 16 : 24,
+                  2,
+                ),
+                child: modeBar,
+              ),
+            Expanded(child: FadeSwitcher(child: _body(context))),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _modeBar(BuildContext context, int total) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    Widget pill(String label, bool selected, VoidCallback onTap) => FocusRing(
+      radius: 999,
+      child: Material(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.16)
+            : colors.surfaceContainerHigh.withValues(alpha: 0.6),
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: selected
+                ? colors.primary.withValues(alpha: 0.55)
+                : colors.outlineVariant.withValues(alpha: 0.45),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            child: Text(
+              label,
+              style: text.labelLarge?.copyWith(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? colors.primary : colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return Row(
+      children: [
+        pill('当前站源', !_aggregate, () => _setAggregate(false)),
+        const SizedBox(width: 8),
+        pill('全网聚合 ($total)', _aggregate, () => _setAggregate(true)),
+      ],
     );
   }
 
@@ -187,6 +362,9 @@ class _SearchPageState extends State<SearchPage> {
             ),
         ],
       );
+    }
+    if (_aggregate && _submitted.isNotEmpty) {
+      return _aggregateBody(context);
     }
     final results = _results;
     if (results == null) {
@@ -279,6 +457,150 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  Widget _aggregateBody(BuildContext context) {
+    final television = AppScope.of(context).television;
+    if (_aggItems.isEmpty) {
+      if (_aggLoading) {
+        return StatusView.loading(
+          key: const ValueKey('agg-loading'),
+          title: '正在全网聚合搜索',
+          message: '已完成 $_aggDone / $_aggTotal 个站源',
+        );
+      }
+      if (_aggTotal > 0 && _aggErrors.length == _aggTotal) {
+        return StatusView(
+          key: const ValueKey('agg-error'),
+          title: '全网搜索失败',
+          message: '所有可搜索站源均请求失败，请检查网络或切换当前站源后重试',
+          icon: Icons.cloud_off_rounded,
+          action: '重试',
+          onAction: () => _submit(_submitted),
+        );
+      }
+      return StatusView(
+        key: const ValueKey('agg-empty'),
+        title: '没有找到「$_submitted」',
+        message: '已搜索 $_aggTotal 个站源，换个关键词试试',
+        icon: Icons.search_off_rounded,
+      );
+    }
+    final counts = <String, int>{};
+    for (final item in _aggItems) {
+      counts[item.source] = (counts[item.source] ?? 0) + 1;
+    }
+    final sourceOrder = counts.keys.toList()
+      ..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final activeFilter =
+        _aggSourceFilter.isNotEmpty && counts.containsKey(_aggSourceFilter)
+        ? _aggSourceFilter
+        : '';
+    final displayed = activeFilter.isEmpty
+        ? _aggItems
+        : [
+            for (final item in _aggItems)
+              if (item.source == activeFilter) item,
+          ];
+    final inset = television
+        ? televisionInset
+        : AppScope.formFactorOf(context) == FormFactor.phone
+        ? 16.0
+        : 24.0;
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      key: ValueKey(('agg-results', _submitted)),
+      builder: (context, constraints) => CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(inset, 8, inset, 4),
+              child: Row(
+                children: [
+                  if (_aggLoading) ...[
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      _aggLoading
+                          ? '正在搜索 $_aggDone / $_aggTotal 个站源，已找到 ${_aggItems.length} 条'
+                          : '已完成 $_aggDone 个站源搜索，共找到 ${_aggItems.length} 条结果',
+                      style: text.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (sourceOrder.length > 1)
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: inset, vertical: 4),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text('全部 (${_aggItems.length})'),
+                        selected: activeFilter.isEmpty,
+                        onSelected: (_) =>
+                            setState(() => _aggSourceFilter = ''),
+                      ),
+                    ),
+                    for (final sourceId in sourceOrder)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            '${SourceSite.byId(sourceId).name} (${counts[sourceId]})',
+                          ),
+                          selected: activeFilter == sourceId,
+                          onSelected: (_) =>
+                              setState(() => _aggSourceFilter = sourceId),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(
+              inset,
+              8,
+              inset,
+              television ? 27 : 20,
+            ),
+            sliver: DramaSliverGrid(
+              width: constraints.maxWidth - inset * 2,
+              items: displayed,
+              autofocus: television,
+              subtitleOf: (drama) {
+                final siteName = SourceSite.byId(drama.source).name;
+                if (drama.category.isNotEmpty) {
+                  return '$siteName · ${drama.category}';
+                }
+                if (drama.badge.isNotEmpty) {
+                  return '$siteName · ${drama.badge}';
+                }
+                return siteName;
+              },
+              onOpen: _open,
+              onMore: (drama) => quickFollow(context, widget.store, drama),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _recent(BuildContext context) => ListenableBuilder(
     listenable: widget.store,
     builder: (context, _) {
@@ -289,9 +611,12 @@ class _SearchPageState extends State<SearchPage> {
 
   Widget _recentContent(BuildContext context, List<String> recent) {
     if (recent.isEmpty) {
+      final total = _searchableSources.length;
       return StatusView(
         key: const ValueKey('empty'),
-        title: '在 ${widget.source.name} 中搜索',
+        title: _aggregate && total > 1
+            ? '在全网 $total 个站源中聚合搜索'
+            : '在 ${widget.source.name} 中搜索',
         message: '输入剧名或关键词',
         icon: Icons.search_rounded,
       );

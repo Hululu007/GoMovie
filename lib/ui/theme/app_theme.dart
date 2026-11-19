@@ -4,6 +4,14 @@ import 'package:flutter/services.dart';
 import 'motion.dart';
 
 abstract final class AppTheme {
+  static const crimson = Color(0xFFFF2E54);
+  static const gold = Color(0xFFFF9E2C);
+  static const brandGradient = LinearGradient(
+    colors: [crimson, gold],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
   static ThemeMode mode(String preference) => switch (preference) {
     'light' => ThemeMode.light,
     'dark' => ThemeMode.dark,
@@ -79,6 +87,34 @@ abstract final class AppTheme {
         space: 1,
         thickness: 1,
       ),
+      cardTheme: CardThemeData(
+        color: scheme.surfaceContainerLow,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerHigh,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
     );
     final titled = theme.copyWith(
       appBarTheme: theme.appBarTheme.copyWith(
@@ -88,7 +124,26 @@ abstract final class AppTheme {
           color: scheme.onSurface,
         ),
       ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: scheme.surfaceContainerHighest,
+        contentTextStyle: theme.textTheme.bodyMedium?.copyWith(
+          color: scheme.onSurface,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
       navigationBarTheme: NavigationBarThemeData(
+        height: 64,
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: scheme.primary.withValues(alpha: 0.14),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          final selected = states.contains(WidgetState.selected);
+          return IconThemeData(
+            size: 22,
+            color: selected ? scheme.primary : scheme.onSurfaceVariant,
+          );
+        }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return theme.textTheme.labelMedium?.copyWith(

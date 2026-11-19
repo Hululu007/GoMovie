@@ -7,13 +7,18 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core_bridge.dart';
+import '../../local_store.dart';
 import '../app_scope.dart';
+import '../detail/detail_page.dart';
+import '../shell/app_shell.dart';
+import '../widgets/group_card.dart';
 
 /// 网盘频道：扫码登录夸克 → 粘贴分享链接 → 选集播放。
 ///
 /// 说明：分享列表免登录即可解析；播放需要登录态（cookie 只存本机）。
 class NetdiskPage extends StatefulWidget {
-  const NetdiskPage({super.key});
+  const NetdiskPage({super.key, this.store});
+  final LocalStore? store;
 
   @override
   State<NetdiskPage> createState() => _NetdiskPageState();
@@ -187,6 +192,25 @@ class _NetdiskPageState extends State<NetdiskPage> {
     }
   }
 
+  Future<void> _openDetail() async {
+    final store = widget.store;
+    final url = _link.text.trim();
+    if (store == null || url.isEmpty) return;
+    setState(() => _loading = true);
+    try {
+      final drama = await AppScope.of(context).repository.netdiskOpenShare(url);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      openPage<void>(context, (_) => DetailPage(store: store, drama: drama));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+
   Future<void> _play(int index) async {
     setState(() => _loading = true);
     try {
@@ -218,120 +242,173 @@ class _NetdiskPageState extends State<NetdiskPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('网盘分享与订阅')),
+      appBar: AppBar(title: const Text('网盘与订阅')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
         children: [
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.cloud_outlined),
-                  title: const Text('夸克网盘'),
-                  subtitle: Text(_status),
-                  trailing: _loggedIn
-                      ? TextButton(onPressed: _logout, child: const Text('退出登录'))
-                      : FilledButton(
-                          onPressed: _loading ? null : _login,
-                          child: const Text('扫码登录'),
-                        ),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(minHeight: 3),
+            ),
+          const SectionHeader('夸克网盘账号'),
+          GroupCard(
+            children: [
+              ListTile(
+                contentPadding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _loggedIn ? Icons.cloud_done_rounded : Icons.cloud_outlined,
+                    size: 20,
+                    color: _loggedIn ? colors.primary : colors.onSurfaceVariant,
+                  ),
                 ),
-                if (_loggedIn)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: _loading ? null : _cleanupTemp,
-                        icon: const Icon(
-                          Icons.cleaning_services_outlined,
-                          size: 16,
-                        ),
-                        label: const Text('清理临时目录 (gomovie_tmp)'),
+                title: const Text(
+                  '夸克网盘',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(_status.isEmpty ? '正在检查登录态…' : _status),
+                trailing: _loggedIn
+                    ? TextButton(onPressed: _logout, child: const Text('退出登录'))
+                    : FilledButton(
+                        onPressed: _loading ? null : _login,
+                        child: const Text('扫码登录'),
                       ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    '饭太硬 / TVBox 接口订阅',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _tvboxSummary,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _tvboxUrl,
-                          decoration: const InputDecoration(
-                            hintText: '输入订阅 JSON 地址 (http/https)',
-                            border: OutlineInputBorder(),
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _loading ? null : _subscribeTVBox,
-                        child: const Text('同步'),
-                      ),
-                    ],
-                  ),
-                  if (_tvboxUrl.text.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _loading ? null : _clearTVBox,
-                        child: const Text('清除订阅'),
-                      ),
-                    ),
-                  ],
-                ],
               ),
-            ),
+              if (_loggedIn)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 12, 10),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _loading ? null : _cleanupTemp,
+                      icon: const Icon(
+                        Icons.cleaning_services_outlined,
+                        size: 16,
+                      ),
+                      label: const Text('清理临时目录 (gomovie_tmp)'),
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _link,
-            decoration: const InputDecoration(
-              labelText: '粘贴夸克分享链接',
-              hintText: 'https://pan.quark.cn/s/xxxx',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 1,
+          const SectionHeader('饭太硬 / TVBox 接口订阅'),
+          GroupCard(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _tvboxSummary,
+                      style: text.bodyMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _tvboxUrl,
+                            decoration: const InputDecoration(
+                              hintText: '输入订阅 JSON 地址 (http/https)',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: _loading ? null : _subscribeTVBox,
+                          child: const Text('同步'),
+                        ),
+                      ],
+                    ),
+                    if (_tvboxUrl.text.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _loading ? null : _clearTVBox,
+                          child: const Text('清除订阅'),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _loading ? null : _parse,
-            icon: const Icon(Icons.search),
-            label: Text(_loading ? '处理中…' : '解析分享'),
+          const SizedBox(height: 16),
+          const SectionHeader('网盘分享链接直解'),
+          GroupCard(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _link,
+                      decoration: const InputDecoration(
+                        labelText: '粘贴夸克分享链接',
+                        hintText: 'https://pan.quark.cn/s/xxxx',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 8,
+                      children: [
+                        if (widget.store != null)
+                          FilledButton.icon(
+                            onPressed: _loading ? null : _openDetail,
+                            icon: const Icon(Icons.play_circle_outline_rounded),
+                            label: const Text('打开剧集详情页播放'),
+                          ),
+                        FilledButton.tonalIcon(
+                          onPressed: _loading ? null : _parse,
+                          icon: const Icon(Icons.search_rounded),
+                          label: Text(_loading ? '处理中…' : '解析文件列表'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (_episodes.isNotEmpty) const Divider(height: 1),
+              for (var i = 0; i < _episodes.length; i++) ...[
+                if (i > 0) const Divider(height: 1, indent: 52),
+                ListTile(
+                  dense: true,
+                  leading: Text('${i + 1}'),
+                  title: Text(
+                    '${_episodes[i]['name'] ?? ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(_sizeText(_episodes[i]['size'])),
+                  trailing: const Icon(Icons.play_arrow_rounded),
+                  onTap: () => _play(i),
+                ),
+              ],
+            ],
           ),
-          if (_loading) const LinearProgressIndicator(minHeight: 3),
-          const SizedBox(height: 12),
-          for (var i = 0; i < _episodes.length; i++)
-            ListTile(
-              dense: true,
-              leading: Text('${i + 1}'),
-              title: Text('${_episodes[i]['name'] ?? ''}'),
-              subtitle: Text(_sizeText(_episodes[i]['size'])),
-              trailing: const Icon(Icons.play_arrow_rounded),
-              onTap: () => _play(i),
-            ),
         ],
       ),
     );

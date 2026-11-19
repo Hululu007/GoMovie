@@ -41,6 +41,7 @@ class _PosterButtonState extends State<_PosterButton> {
 
   @override
   Widget build(BuildContext context) {
+    final television = AppScope.of(context).television;
     final visible = focusVisible(_focused);
     final layer = _pressed ? 0.12 : (_hovered ? 0.08 : 0.0);
     final button = InkWell(
@@ -65,7 +66,17 @@ class _PosterButtonState extends State<_PosterButton> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  widget.cover,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(_coverRadius),
+                    child: AnimatedScale(
+                      scale: _pressed
+                          ? 0.97
+                          : (_hovered && !television ? 1.025 : 1),
+                      duration: const Duration(milliseconds: 160),
+                      curve: Motion.standard,
+                      child: widget.cover,
+                    ),
+                  ),
                   IgnorePointer(
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
@@ -93,7 +104,7 @@ class _PosterButtonState extends State<_PosterButton> {
           const SingleActivator(LogicalKeyboardKey.contextMenu): ?widget.onMore,
         },
         child: AnimatedScale(
-          scale: visible && AppScope.of(context).television ? 1.06 : 1,
+          scale: visible && television ? 1.06 : 1,
           duration: const Duration(milliseconds: 120),
           child: button,
         ),

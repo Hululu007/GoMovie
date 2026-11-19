@@ -53,10 +53,15 @@ def prepare_bundled_modules(extra=()):
                 shutil.rmtree(child)
             else:
                 child.unlink()
-    for item in [*os.environ.get('BUNDLED_MODULES', '').split(','), *extra]:
-        if not item.strip():
-            continue
-        source = Path(item.strip())
+    configured = [item.strip() for item in os.environ.get('BUNDLED_MODULES', '').split(',') if item.strip()]
+    items = [*configured, *[item.strip() for item in extra if item.strip()]]
+    if not items and (ROOT / 'modules').is_dir():
+        items = sorted(
+            str(entry) for entry in (ROOT / 'modules').iterdir()
+            if entry.is_dir() and all((entry / name).is_file() for name in MODULE_FILES)
+        )
+    for item in items:
+        source = Path(item)
         if not source.is_absolute():
             source = ROOT / source
         missing = [name for name in MODULE_FILES if not (source / name).is_file()]

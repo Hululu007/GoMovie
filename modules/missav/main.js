@@ -6,7 +6,7 @@ const slugPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const cardPattern = /\/(?:dm[0-9]+\/)?cn\/([a-z0-9][a-z0-9._-]{0,127})\/?$/;
 const genrePattern = /\/(?:dm[0-9]+\/)?cn\/genres\/([^/?#]+)\/?$/;
 const pagePattern = /[?&]page=([0-9]{1,7})/;
-const mediaPattern = /https?:\/\/surrit\.com\/[0-9a-f-]{36}\/playlist\.m3u8/;
+const mediaPattern = /https?:\/\/(?:surrit\.com|[a-z0-9.-]+)\/[0-9a-f-]{36}\/playlist\.m3u8/i;
 const packedPattern = /eval\(function\(p,a,c,k,e,d\)\{.*?\}\('((?:[^'\\]|\\.)*)',([0-9]+),([0-9]+),'((?:[^'\\]|\\.)*)'\.split\('\|'\)/gs;
 
 function truncate(text, limit) {
@@ -241,7 +241,7 @@ function poster(document) {
 function cardImage(card) {
   let fallback = null;
   for (const image of htmlNodes(card, tagged("img"))) {
-    const source = htmlAttr(image, "data-src");
+    const source = firstNonEmpty(htmlAttr(image, "data-src"), htmlAttr(image, "data-original"));
     if (source !== "" && !source.startsWith("data:")) {
       return image;
     }
@@ -281,7 +281,7 @@ function parseCards(document) {
     if (title === "") {
       title = slug.toUpperCase();
     }
-    const cover = image === null ? "" : coverAddress(firstNonEmpty(htmlAttr(image, "data-src"), htmlAttr(image, "src")));
+    const cover = image === null ? "" : coverAddress(firstNonEmpty(htmlAttr(image, "data-src"), htmlAttr(image, "data-original"), htmlAttr(image, "src")));
     const badge = htmlNodes(card, (node) => node.tag === "span" && htmlClass(node, "absolute"))[0];
     seen.add(slug);
     items.push({

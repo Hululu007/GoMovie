@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -85,18 +86,75 @@ func (p *tvboxProvider) buildAPIURL(params url.Values) (string, error) {
 }
 
 type tvboxVodItem struct {
-	ID          any    `json:"vod_id"`
-	Name        string `json:"vod_name"`
-	Pic         string `json:"vod_pic"`
-	Remarks     string `json:"vod_remarks"`
-	TypeName    string `json:"type_name"`
-	Content     string `json:"vod_content"`
-	Year        string `json:"vod_year"`
-	Area        string `json:"vod_area"`
-	PlayFrom    string `json:"vod_play_from"`
-	PlayURL     string `json:"vod_play_url"`
-	VodDirector string `json:"vod_director"`
-	VodActor    string `json:"vod_actor"`
+	ID             any    `json:"vod_id"`
+	Name           string `json:"vod_name"`
+	Pic            string `json:"vod_pic"`
+	Remarks        string `json:"vod_remarks"`
+	TypeName       string `json:"type_name"`
+	Content        string `json:"vod_content"`
+	Year           string `json:"vod_year"`
+	Area           string `json:"vod_area"`
+	PlayFrom       string `json:"vod_play_from"`
+	PlayURL        string `json:"vod_play_url"`
+	VodDirector    string `json:"vod_director"`
+	VodActor       string `json:"vod_actor"`
+	VodScore       any    `json:"vod_score"`
+	VodDoubanScore any    `json:"vod_douban_score"`
+}
+
+var tvboxHTMLTagPattern = regexp.MustCompile(`<[^>]+>`)
+
+func cleanTVBoxText(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	replacer := strings.NewReplacer(
+		"<br>", "\n",
+		"<br/>", "\n",
+		"<br />", "\n",
+		"</p>", "\n",
+		"&nbsp;", " ",
+		"&amp;", "&",
+		"&lt;", "<",
+		"&gt;", ">",
+		"&quot;", `"`,
+		"&#39;", "'",
+	)
+	text := replacer.Replace(raw)
+	text = tvboxHTMLTagPattern.ReplaceAllString(text, " ")
+	lines := strings.Split(text, "\n")
+	cleaned := make([]string, 0, len(lines))
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			cleaned = append(cleaned, strings.Join(fields, " "))
+		}
+	}
+	return strings.Join(cleaned, "\n")
+}
+
+func tvboxScoreString(v any) string {
+	switch val := v.(type) {
+	case float64:
+		if val > 0 && val <= 10 {
+			return strconv.FormatFloat(val, 'f', 1, 64)
+		}
+		return ""
+	case int:
+		if val > 0 && val <= 10 {
+			return strconv.Itoa(val) + ".0"
+		}
+		return ""
+	case int64:
+		if val > 0 && val <= 10 {
+			return strconv.FormatInt(val, 10) + ".0"
+		}
+		return ""
+	case string:
+		return NativeDramaScore(val)
+	default:
+		return ""
+	}
 }
 
 type tvboxResponse struct {
@@ -151,6 +209,14 @@ func (p *tvboxProvider) Categories(ctx context.Context, _ bool) ([]Category, err
 	if err := p.getJSON(ctx, u, &resp); err != nil {
 		return nil, err
 	}
+	if len(resp.Class) == 0 {
+		if homeURL, homeErr := p.buildAPIURL(url.Values{}); homeErr == nil {
+			var homeResp tvboxResponse
+			if p.getJSON(ctx, homeURL, &homeResp) == nil && len(homeResp.Class) > 0 {
+				resp.Class = homeResp.Class
+			}
+		}
+	}
 	cats := []Category{{ID: "", Name: "全部"}}
 	seen := map[string]bool{"": true}
 	for _, c := range resp.Class {
@@ -173,14 +239,19 @@ func (p *tvboxProvider) toDramas(items []tvboxVodItem) []Drama {
 			continue
 		}
 		badge := strings.TrimSpace(item.Remarks)
+		score := tvboxScoreString(item.VodScore)
+		if score == "" {
+			score = tvboxScoreString(item.VodDoubanScore)
+		}
 		out = append(out, Drama{
 			ID:         p.id + ":" + vodID,
 			Source:     p.id,
 			SourceID:   vodID,
 			Title:      strings.TrimSpace(item.Name),
 			Cover:      strings.TrimSpace(item.Pic),
-			Desc:       strings.TrimSpace(item.Content),
+			Desc:       cleanTVBoxText(item.Content),
 			Category:   strings.TrimSpace(item.TypeName),
+			Score:      score,
 			Badge:      badge,
 			OnlineDate: strings.TrimSpace(item.Year),
 		})
@@ -192,12 +263,13 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 	if page < 1 {
 		page = 1
 	}
+	cat := strings.TrimSpace(category)
 	q := url.Values{
 		"ac": {"detail"},
 		"pg": {strconv.Itoa(page)},
 	}
-	if strings.TrimSpace(category) != "" && category != "all" {
-		q.Set("t", category)
+	if cat != "" && cat != "all" {
+		q.Set("t", cat)
 	}
 	u, err := p.buildAPIURL(q)
 	if err != nil {
@@ -206,6 +278,14 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 	var resp tvboxResponse
 	if err := p.getJSON(ctx, u, &resp); err != nil {
 		return nil, false, err
+	}
+	if len(resp.List) == 0 && page == 1 && (cat == "" || cat == "all") {
+		if homeURL, homeErr := p.buildAPIURL(url.Values{}); homeErr == nil {
+			var homeResp tvboxResponse
+			if p.getJSON(ctx, homeURL, &homeResp) == nil && len(homeResp.List) > 0 {
+				resp = homeResp
+			}
+		}
 	}
 	dramas := p.toDramas(resp.List)
 	pageCount := anyToInt(resp.PageCount)
@@ -236,6 +316,33 @@ func (p *tvboxProvider) Search(ctx context.Context, page int, query string) ([]D
 	return dramas, hasMore, nil
 }
 
+func tvboxTagsFromItem(item tvboxVodItem) []string {
+	tags := make([]string, 0, 8)
+	seen := map[string]bool{}
+	add := func(raw string) {
+		val := strings.TrimSpace(raw)
+		if val == "" || seen[val] || len(tags) >= 12 {
+			return
+		}
+		seen[val] = true
+		tags = append(tags, val)
+	}
+	add(item.Year)
+	add(item.Area)
+	add(item.TypeName)
+	for _, director := range strings.FieldsFunc(item.VodDirector, func(r rune) bool { return r == ',' || r == '，' || r == '/' }) {
+		if trimmed := strings.TrimSpace(director); trimmed != "" {
+			add("导演 " + trimmed)
+		}
+	}
+	for _, actor := range strings.FieldsFunc(item.VodActor, func(r rune) bool { return r == ',' || r == '，' || r == '/' }) {
+		if trimmed := strings.TrimSpace(actor); trimmed != "" {
+			add(trimmed)
+		}
+	}
+	return tags
+}
+
 func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []Chapter, error) {
 	q := url.Values{
 		"ac":  {"detail"},
@@ -253,16 +360,22 @@ func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []C
 		return Drama{}, nil, errors.New("未找到影片详情")
 	}
 	item := resp.List[0]
+	score := tvboxScoreString(item.VodScore)
+	if score == "" {
+		score = tvboxScoreString(item.VodDoubanScore)
+	}
 	drama := Drama{
 		ID:         p.id + ":" + sourceID,
 		Source:     p.id,
 		SourceID:   sourceID,
 		Title:      strings.TrimSpace(item.Name),
 		Cover:      strings.TrimSpace(item.Pic),
-		Desc:       strings.TrimSpace(item.Content),
+		Desc:       cleanTVBoxText(item.Content),
 		Category:   strings.TrimSpace(item.TypeName),
+		Score:      score,
 		Badge:      strings.TrimSpace(item.Remarks),
 		OnlineDate: strings.TrimSpace(item.Year),
+		Tags:       tvboxTagsFromItem(item),
 	}
 
 	routes := strings.Split(item.PlayFrom, "$$$")
@@ -275,8 +388,13 @@ func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []C
 		if rIdx < len(routes) {
 			routeName = strings.TrimSpace(routes[rIdx])
 		}
-		entries := strings.Split(group, "#")
-		// 如果某条线路只给了一个夸克分享链接，自动展开分享文件夹里的全部剧集。
+		rawEntries := strings.Split(group, "#")
+		entries := make([]string, 0, len(rawEntries))
+		for _, e := range rawEntries {
+			if strings.TrimSpace(e) != "" {
+				entries = append(entries, e)
+			}
+		}
 		if len(entries) == 1 {
 			_, rawLink := parseEpisodeEntry(entries[0], "正片")
 			if shareURL := netdisk.ExtractShareURL(rawLink); shareURL != "" && netdisk.DetectProvider(shareURL) == "quark" {
@@ -298,6 +416,8 @@ func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []C
 			videoRef := rawLink
 			if shareURL := netdisk.ExtractShareURL(rawLink); shareURL != "" {
 				videoRef = encodeNetdiskVideoRef(0, shareURL)
+			} else if before, _, ok := strings.Cut(rawLink, "$"); ok && (strings.HasPrefix(strings.ToLower(before), "http://") || strings.HasPrefix(strings.ToLower(before), "https://")) {
+				videoRef = strings.TrimSpace(before)
 			}
 			epIndex++
 			epNum, _ := json.Marshal(epIndex)
@@ -364,6 +484,51 @@ func parseEpisodeEntry(entry, fallbackName string) (string, string) {
 	return fallbackName, trimmed
 }
 
+func isDirectMediaURL(raw string) bool {
+	lower := strings.ToLower(strings.TrimSpace(raw))
+	if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+		return false
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	p := strings.ToLower(parsed.Path)
+	return strings.HasSuffix(p, ".m3u8") ||
+		strings.HasSuffix(p, ".mp4") ||
+		strings.HasSuffix(p, ".flv") ||
+		strings.HasSuffix(p, ".mkv")
+}
+
+func parseTVBoxHeaderMap(raw any) map[string]string {
+	out := map[string]string{}
+	switch v := raw.(type) {
+	case map[string]any:
+		for k, val := range v {
+			if s := strings.TrimSpace(anyToStringOrText(val)); s != "" {
+				out[k] = s
+			}
+		}
+	case string:
+		var decoded map[string]any
+		if json.Unmarshal([]byte(v), &decoded) == nil {
+			for k, val := range decoded {
+				if s := strings.TrimSpace(anyToStringOrText(val)); s != "" {
+					out[k] = s
+				}
+			}
+		}
+	}
+	return out
+}
+
+func anyToStringOrText(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return anyToString(v)
+}
+
 func (p *tvboxProvider) ResolveMedia(ctx context.Context, task Task) (ProviderMedia, error) {
 	raw := strings.TrimSpace(task.Chapter.VideoURL)
 	if raw == "" {
@@ -371,6 +536,63 @@ func (p *tvboxProvider) ResolveMedia(ctx context.Context, task Task) (ProviderMe
 	}
 	if _, _, isNetdisk := decodeNetdiskVideoRef(raw); isNetdisk {
 		return resolveNetdiskMedia(ctx, raw)
+	}
+	if p.site.Type == 4 && !isDirectMediaURL(raw) {
+		playURL, buildErr := p.buildAPIURL(url.Values{"play": {raw}})
+		if buildErr == nil {
+			var playResp struct {
+				URL     string `json:"url"`
+				Header  any    `json:"header"`
+				Headers any    `json:"headers"`
+			}
+			getErr := p.getJSON(ctx, playURL, &playResp)
+			if getErr == nil {
+				resolved := strings.TrimSpace(playResp.URL)
+				if _, _, isNetdisk := decodeNetdiskVideoRef(resolved); isNetdisk {
+					return resolveNetdiskMedia(ctx, resolved)
+				}
+				if strings.HasPrefix(strings.ToLower(resolved), "http://") || strings.HasPrefix(strings.ToLower(resolved), "https://") {
+					hdrs := parseTVBoxHeaderMap(playResp.Header)
+					if len(hdrs) == 0 {
+						hdrs = parseTVBoxHeaderMap(playResp.Headers)
+					}
+					referer := p.site.API
+					ua := ""
+					cookie := ""
+					for k, v := range hdrs {
+						switch strings.ToLower(strings.TrimSpace(k)) {
+						case "referer":
+							referer = v
+						case "user-agent":
+							ua = v
+						case "cookie":
+							cookie = v
+						}
+					}
+					media := ProviderMedia{
+						URL:     resolved,
+						Referer: referer,
+					}
+					if ua != "" || cookie != "" {
+						parsed, _ := url.Parse(resolved)
+						media.Credentials = &MediaCredentials{
+							Cookie:    cookie,
+							Origin:    ProviderMediaOrigin(parsed),
+							Referer:   referer,
+							UserAgent: ua,
+						}
+					}
+					return media, nil
+				}
+			}
+			lowerRaw := strings.ToLower(raw)
+			if !strings.HasPrefix(lowerRaw, "http://") && !strings.HasPrefix(lowerRaw, "https://") {
+				if getErr != nil {
+					return ProviderMedia{}, getErr
+				}
+				return ProviderMedia{}, errors.New("T4 解析接口未返回有效播放地址")
+			}
+		}
 	}
 	return ProviderMedia{
 		URL:     raw,

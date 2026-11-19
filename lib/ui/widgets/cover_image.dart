@@ -8,6 +8,7 @@ import '../../cover_loader.dart';
 import '../../models.dart';
 import '../app_scope.dart';
 import '../cover_blur.dart';
+import '../theme/app_theme.dart';
 import 'motion/motion_widgets.dart';
 
 const vipGold = Color(0xFFF6C86B);
@@ -133,14 +134,22 @@ class DramaCover extends StatelessWidget {
             ),
           if (details && showScore && drama.score.isNotEmpty)
             Positioned(
-              right: 9,
-              bottom: 9,
-              child: Text(
-                drama.score,
-                style: const TextStyle(
-                  color: Color(0xFFFFC542),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+              right: 8,
+              bottom: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xA6000000),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '★ ${drama.score}',
+                  style: const TextStyle(
+                    color: Color(0xFFFFC542),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
                 ),
               ),
             ),
@@ -153,6 +162,18 @@ class DramaCover extends StatelessWidget {
             ),
           if (rank case final rank?)
             Positioned(left: 0, top: 0, child: RankBadge(rank: rank)),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(radius),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -165,7 +186,6 @@ class RankBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final top = rank <= 3;
     return Container(
       constraints: const BoxConstraints(minWidth: 28),
@@ -173,11 +193,8 @@ class RankBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: !top
-            ? const Color(0x8C000000)
-            : theme.brightness == Brightness.dark
-            ? theme.colorScheme.inversePrimary
-            : theme.colorScheme.primary,
+        color: top ? null : const Color(0x8C000000),
+        gradient: top ? AppTheme.brandGradient : null,
         borderRadius: const BorderRadius.only(bottomRight: Radius.circular(10)),
       ),
       child: Text(

@@ -18,6 +18,7 @@ import '../mine/mine_page.dart';
 import '../update_prompt.dart';
 import '../modules/module_install.dart';
 import '../widgets/bar_button.dart';
+import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../widgets/focus_ring.dart';
 import '../widgets/motion/motion_widgets.dart';
@@ -307,18 +308,29 @@ class _AppShellState extends State<AppShell> {
           body: pages,
           bottomNavigationBar: covered
               ? null
-              : NavigationBar(
-                  selectedIndex: tabs.indexOf(_tab),
-                  onDestinationSelected: (index) => _tap(tabs[index]),
-                  destinations: [
-                    for (final tab in tabs)
-                      NavigationDestination(
-                        key: ValueKey('nav-${tab.name}'),
-                        icon: _badged(tab, Icon(tab.icon)),
-                        selectedIcon: _badged(tab, Icon(tab.selectedIcon)),
-                        label: tab.label,
+              : DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withValues(alpha: 0.45),
                       ),
-                  ],
+                    ),
+                  ),
+                  child: NavigationBar(
+                    selectedIndex: tabs.indexOf(_tab),
+                    onDestinationSelected: (index) => _tap(tabs[index]),
+                    destinations: [
+                      for (final tab in tabs)
+                        NavigationDestination(
+                          key: ValueKey('nav-${tab.name}'),
+                          icon: _badged(tab, Icon(tab.icon)),
+                          selectedIcon: _badged(tab, Icon(tab.selectedIcon)),
+                          label: tab.label,
+                        ),
+                    ],
+                  ),
                 ),
         ),
         FormFactor.pad || FormFactor.window => _wide(pages),
@@ -528,6 +540,15 @@ class _SideBarState extends State<_SideBar> {
               : Duration.zero,
           curve: expanded ? Motion.enter : Motion.exit,
           width: metrics.width,
+          decoration: BoxDecoration(
+            border: Border(
+              right: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               metrics.inset,
@@ -541,20 +562,76 @@ class _SideBarState extends State<_SideBar> {
               children: [
                 Padding(
                   padding: EdgeInsets.only(bottom: metrics.menuGap),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: 56,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SizedBox(
                       height: 48,
-                      child: onToggle == null
-                          ? null
-                          : Center(
-                              child: BarButton(
-                                icon: Icons.menu_rounded,
-                                tooltip: expanded ? '收起侧栏' : '展开侧栏',
-                                onPressed: onToggle,
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 56,
+                            height: 48,
+                            child: onToggle == null
+                                ? null
+                                : Center(
+                                    child: BarButton(
+                                      icon: Icons.menu_rounded,
+                                      tooltip: expanded ? '收起侧栏' : '展开侧栏',
+                                      onPressed: onToggle,
+                                    ),
+                                  ),
+                          ),
+                          if (constraints.maxWidth >= 148)
+                            Expanded(
+                              child: AnimatedOpacity(
+                                opacity: expanded ? 1 : 0,
+                                duration: Motion.of(context, Motion.short),
+                                curve: expanded
+                                    ? const Interval(
+                                        0.35,
+                                        1,
+                                        curve: Motion.enter,
+                                      )
+                                    : Motion.exit,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        gradient: AppTheme.brandGradient,
+                                        borderRadius: BorderRadius.circular(7),
+                                      ),
+                                      child: const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: Icon(
+                                          Icons.play_arrow_rounded,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'GoMovie',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.clip,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: -0.2,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -596,16 +673,15 @@ class _SideItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final color = selected
-        ? colors.onSecondaryContainer
-        : colors.onSurfaceVariant;
+    final iconColor = selected ? colors.primary : colors.onSurfaceVariant;
+    final labelColor = selected ? colors.onSurface : colors.onSurfaceVariant;
     final icon = badged(
       tab,
       ToggleIconSwitcher(
         child: Icon(
           selected ? tab.selectedIcon : tab.icon,
           key: ValueKey(selected),
-          color: color,
+          color: iconColor,
           size: metrics.iconSize,
         ),
       ),
@@ -617,7 +693,9 @@ class _SideItem extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: ShapeDecoration(
         shape: const StadiumBorder(),
-        color: selected ? colors.secondaryContainer : Colors.transparent,
+        color: selected
+            ? colors.primary.withValues(alpha: 0.14)
+            : Colors.transparent,
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -626,49 +704,74 @@ class _SideItem extends StatelessWidget {
           onTap: onTap,
           child: SizedBox(
             height: metrics.itemHeight,
-            child: Padding(
-              padding: EdgeInsets.only(left: metrics.labelPadding.left),
-              child: Row(
-                children: [
-                  icon,
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ExcludeSemantics(
-                      excluding: !expanded,
-                      child: AnimatedOpacity(
-                        opacity: expanded ? 1 : 0,
-                        alwaysIncludeSemantics: true,
-                        duration: Motion.of(context, Motion.short),
-                        curve: expanded
-                            ? const Interval(0.4, 1, curve: Motion.enter)
-                            : Motion.exit,
-                        child: AnimatedDefaultTextStyle(
-                          duration: duration,
-                          curve: Motion.standard,
-                          style: theme.textTheme.titleSmall!.copyWith(
-                            fontSize: metrics.labelSize,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                            color: color,
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.only(
-                              right: metrics.labelPadding.right,
-                            ),
-                            child: Text(
-                              tab.label,
-                              maxLines: 1,
-                              softWrap: false,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
+            child: Stack(
+              children: [
+                if (selected)
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.brandGradient,
+                          borderRadius: BorderRadius.circular(99),
                         ),
+                        child: const SizedBox(width: 3.5, height: 18),
                       ),
                     ),
                   ),
-                ],
-              ),
+                Padding(
+                  padding: EdgeInsets.only(left: metrics.labelPadding.left),
+                  child: Center(
+                    child: Row(
+                      children: [
+                        icon,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ExcludeSemantics(
+                            excluding: !expanded,
+                            child: AnimatedOpacity(
+                              opacity: expanded ? 1 : 0,
+                              alwaysIncludeSemantics: true,
+                              duration: Motion.of(context, Motion.short),
+                              curve: expanded
+                                  ? const Interval(
+                                      0.4,
+                                      1,
+                                      curve: Motion.enter,
+                                    )
+                                  : Motion.exit,
+                              child: AnimatedDefaultTextStyle(
+                                duration: duration,
+                                curve: Motion.standard,
+                                style: theme.textTheme.titleSmall!.copyWith(
+                                  fontSize: metrics.labelSize,
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: labelColor,
+                                ),
+                                child: Padding(
+                                  padding: EdgeInsets.only(
+                                    right: metrics.labelPadding.right,
+                                  ),
+                                  child: Text(
+                                    tab.label,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

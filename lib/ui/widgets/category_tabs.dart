@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
+import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import 'bar_button.dart';
 import 'choice_panel.dart';
@@ -163,7 +164,7 @@ class _CategoryTabsState<T> extends State<CategoryTabs<T>> {
                             child: IgnorePointer(
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: colors.primary,
+                                  gradient: AppTheme.brandGradient,
                                   borderRadius: const BorderRadius.vertical(
                                     top: Radius.circular(3),
                                   ),

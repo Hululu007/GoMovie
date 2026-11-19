@@ -421,7 +421,7 @@ func nativeDispatch(input nativeInput) (any, error) {
 		res["sources"] = engine.sourceList()
 		return res, nil
 	case "webViewBridge":
-		return engine.setWebViewBridge(input.Index, input.URL, input.Source), nil
+		return engine.setWebViewBridge(input.Index, input.URL, input.Source, input.Token, input.Device), nil
 	case "sourceChallengeUrl":
 		return map[string]any{"url": engine.sourceChallengeURL(input.Source)}, nil
 	case "moduleIndex":

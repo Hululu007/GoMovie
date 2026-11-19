@@ -8,7 +8,9 @@ import 'package:media_kit/media_kit.dart';
 
 import '../../playback_preferences.dart';
 import '../../playback_session.dart';
+import '../../webview_bridge.dart';
 import '../app_scope.dart';
+import '../netdisk/netdisk_page.dart';
 import '../settings/sorani_account_view.dart';
 import '../theme/motion.dart';
 import '../widgets/contained_slider.dart';
@@ -1268,7 +1270,49 @@ class PlaybackFailure extends StatelessWidget {
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: [
-                  if (session.loginRequired)
+                  if (WebViewBridge.supported &&
+                      WebViewBridge.isChallengeError(error)) ...[
+                    FilledButton.icon(
+                      focusNode: retryFocus,
+                      onPressed: () async {
+                        if (await WebViewBridge.verifySource(
+                          session.repository,
+                          session.detail.drama.source,
+                        )) {
+                          await session.retry();
+                        }
+                      },
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('完成人机验证'),
+                    ),
+                    TextButton(
+                      onPressed: session.retry,
+                      child: const Text('重试'),
+                    ),
+                  ] else if (error.contains('未登录') &&
+                      (error.contains('网盘') ||
+                          error.contains('夸克') ||
+                          session.detail.drama.source == 'quark')) ...[
+                    FilledButton.icon(
+                      focusNode: retryFocus,
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => NetdiskPage(store: session.store),
+                          ),
+                        );
+                        if (context.mounted) {
+                          await session.retry();
+                        }
+                      },
+                      icon: const Icon(Icons.cloud_outlined),
+                      label: const Text('去登录网盘'),
+                    ),
+                    TextButton(
+                      onPressed: session.retry,
+                      child: const Text('重试'),
+                    ),
+                  ] else if (session.loginRequired)
                     FilledButton(
                       focusNode: retryFocus,
                       onPressed: () async {

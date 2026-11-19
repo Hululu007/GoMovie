@@ -183,6 +183,7 @@ func (module *jsModule) descriptor() SourceDescriptor {
 		Adult:              *module.manifest.Adult,
 		SkipVIPPrompt:      module.manifest.SkipVIPPrompt,
 		Aliases:            module.manifest.Aliases,
+		Hosts:              append([]string(nil), module.manifest.Hosts...),
 		HostSuffixes:       module.manifest.HostSuffixes,
 		BaseURL:            module.manifest.BaseURL,
 		NoHostRotation:     module.manifest.NoHostRotation,

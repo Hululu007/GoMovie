@@ -134,7 +134,7 @@ class SettingsSection extends StatelessWidget {
           subtitle: '扫码登录夸克后可直接播放别人的分享，不会读取或外传你网盘里的其他内容',
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const NetdiskPage()),
+            MaterialPageRoute<void>(builder: (_) => NetdiskPage(store: store)),
           ),
         ),
       ],

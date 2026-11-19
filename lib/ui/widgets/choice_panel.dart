@@ -131,7 +131,7 @@ Future<T?> showAnchoredPanel<T>({
   );
 }
 
-class _ChoicePanel<T> extends StatelessWidget {
+class _ChoicePanel<T> extends StatefulWidget {
   const _ChoicePanel({
     required this.form,
     required this.title,
@@ -148,10 +148,34 @@ class _ChoicePanel<T> extends StatelessWidget {
   final ChoiceAction? action;
 
   @override
+  State<_ChoicePanel<T>> createState() => _ChoicePanelState<T>();
+}
+
+class _ChoicePanelState<T> extends State<_ChoicePanel<T>> {
+  final _filterController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _filterController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final form = widget.form;
+    final options = widget.options;
     final text = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
     final television = form == FormFactor.television;
+    final searchable = !television && options.length > 12;
+    final trimmed = _query.trim().toLowerCase();
+    final filtered = !searchable || trimmed.isEmpty
+        ? options
+        : [
+            for (final option in options)
+              if (option.label.toLowerCase().contains(trimmed)) option,
+          ];
     final spacing = television ? 12.0 : 8.0;
     final header = Row(
       children: [
@@ -160,7 +184,7 @@ class _ChoicePanel<T> extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                widget.title,
                 style: (television ? text.headlineSmall : text.titleLarge)
                     ?.copyWith(
                       fontWeight: FontWeight.w700,
@@ -170,7 +194,9 @@ class _ChoicePanel<T> extends StatelessWidget {
                     ),
               ),
               Text(
-                '${options.length} 个',
+                filtered.length == options.length
+                    ? '${options.length} 个'
+                    : '${filtered.length} / ${options.length} 个',
                 style: (television ? text.bodyMedium : text.bodySmall)
                     ?.copyWith(color: colors.onSurfaceVariant),
               ),
@@ -197,35 +223,88 @@ class _ChoicePanel<T> extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           header,
-          SizedBox(height: television ? 20 : 12),
+          if (searchable) ...[
+            const SizedBox(height: 10),
+            Padding(
+              padding: EdgeInsets.only(
+                right: form == FormFactor.phone ? 12 : 0,
+              ),
+              child: TextField(
+                controller: _filterController,
+                onChanged: (value) => setState(() => _query = value),
+                textInputAction: TextInputAction.search,
+                style: text.bodyMedium,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: colors.surfaceContainerHighest.withValues(
+                    alpha: 0.65,
+                  ),
+                  hintText: '搜索${widget.title}…',
+                  prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: '清空',
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          onPressed: () {
+                            _filterController.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+              ),
+            ),
+          ],
+          SizedBox(height: television ? 20 : 10),
           Flexible(
             child: Padding(
               padding: EdgeInsets.only(
                 right: form == FormFactor.phone ? 12 : 0,
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                padding: EdgeInsets.all(television ? 12 : 6),
-                itemCount: options.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  mainAxisSpacing: spacing,
-                  crossAxisSpacing: spacing,
-                  mainAxisExtent: switch (form) {
-                    FormFactor.phone => 44,
-                    FormFactor.pad || FormFactor.window => 36,
-                    FormFactor.television => 48,
-                  },
-                ),
-                itemBuilder: (context, index) => _ChoiceCell<T>(
-                  option: options[index],
-                  selected: options[index].value == selected,
-                  form: form,
-                ),
-              ),
+              child: filtered.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Text(
+                          '没有匹配的${widget.title}',
+                          style: text.bodyMedium?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.all(television ? 12 : 6),
+                      itemCount: filtered.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: widget.columns,
+                        mainAxisSpacing: spacing,
+                        crossAxisSpacing: spacing,
+                        mainAxisExtent: switch (form) {
+                          FormFactor.phone => 44,
+                          FormFactor.pad || FormFactor.window => 36,
+                          FormFactor.television => 48,
+                        },
+                      ),
+                      itemBuilder: (context, index) => _ChoiceCell<T>(
+                        option: filtered[index],
+                        selected: filtered[index].value == widget.selected,
+                        form: form,
+                      ),
+                    ),
             ),
           ),
-          if (action case final action?)
+          if (widget.action case final action?)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: FocusRing(

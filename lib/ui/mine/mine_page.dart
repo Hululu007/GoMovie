@@ -11,6 +11,7 @@ import '../detail/detail_page.dart';
 import '../downloads/downloads_page.dart';
 import '../history/history_page.dart';
 import '../modules/modules_page.dart';
+import '../netdisk/netdisk_page.dart';
 import '../shell/app_shell.dart';
 import '../settings/settings_page.dart';
 import '../widgets/drama_tile.dart';
@@ -69,6 +70,9 @@ class MinePage extends StatelessWidget {
   void _openModules(BuildContext context) =>
       openPage<void>(context, (_) => ModulesPage(store: store));
 
+  void _openNetdisk(BuildContext context) =>
+      openPage<void>(context, (_) => NetdiskPage(store: store));
+
   void _openSettings(BuildContext context) =>
       openPage<void>(context, (_) => SettingsPage(store: store));
 
@@ -76,9 +80,15 @@ class MinePage extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     spacing: 12,
     children: [
+      _Entry(
+        icon: Icons.cloud_done_outlined,
+        title: '网盘与订阅',
+        subtitle: '夸克网盘 · 饭太硬 / TVBox',
+        onTap: () => _openNetdisk(context),
+      ),
       if (store.canDownload)
         _Entry(
-          icon: Icons.download_rounded,
+          icon: Icons.download_for_offline_outlined,
           title: '下载',
           onTap: () => _openDownloads(context),
         ),
@@ -89,7 +99,7 @@ class MinePage extends StatelessWidget {
           onTap: () => _openModules(context),
         ),
       _Entry(
-        icon: Icons.settings_outlined,
+        icon: Icons.tune_rounded,
         title: '设置',
         onTap: () => _openSettings(context),
       ),
@@ -304,6 +314,14 @@ class MinePage extends StatelessWidget {
                         onTap: () => openUsers(context, store),
                       ),
                     ),
+                    Expanded(
+                      child: _TelevisionEntry(
+                        icon: Icons.cloud_done_outlined,
+                        title: '网盘与订阅',
+                        subtitle: '夸克网盘 · TVBox 订阅',
+                        onTap: () => _openNetdisk(context),
+                      ),
+                    ),
                     if (store.profile.admin)
                       Expanded(
                         child: _TelevisionEntry(
@@ -315,7 +333,7 @@ class MinePage extends StatelessWidget {
                       ),
                     Expanded(
                       child: _TelevisionEntry(
-                        icon: Icons.settings_outlined,
+                        icon: Icons.tune_rounded,
                         title: '设置',
                         subtitle: '外观、播放、站源与网络',
                         onTap: () => _openSettings(context),
@@ -456,9 +474,15 @@ class _UserCard extends StatelessWidget {
 }
 
 class _Entry extends StatelessWidget {
-  const _Entry({required this.icon, required this.title, required this.onTap});
+  const _Entry({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.onTap,
+  });
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
 
   @override
@@ -473,20 +497,47 @@ class _Entry extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: SizedBox(
-            height: 60,
+            height: subtitle == null ? 60 : 68,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 spacing: 14,
                 children: [
-                  Icon(icon, size: 22, color: colors.onSurfaceVariant),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(icon, size: 20, color: colors.onSurfaceVariant),
+                  ),
                   Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 2,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (subtitle case final sub?)
+                          Text(
+                            sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   Icon(

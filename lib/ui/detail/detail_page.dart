@@ -157,6 +157,16 @@ const _pad = _Metrics(
   follow: 44,
 );
 
+typedef _RouteEntry = ({Episode episode, int index, String label});
+typedef _EpisodeRoute = ({String name, List<_RouteEntry> entries});
+typedef _EpisodeScope = ({
+  List<_EpisodeRoute> routes,
+  String routeName,
+  List<_RouteEntry> entries,
+  int groupCount,
+  int group,
+});
+
 class DetailPage extends StatefulWidget {
   const DetailPage({
     super.key,
@@ -181,6 +191,9 @@ class _DetailPageState extends State<DetailPage> {
   bool _expanded = false;
   final _played = <Object>{};
   final _groupKeys = <GlobalKey>[];
+  String _routeDramaId = '';
+  String _selectedRoute = '';
+  int _routeGroup = 0;
   final _televisionDetail = GlobalKey<TelevisionDetailState>();
   bool _entered = false;
   PlaybackHandle? _watched;
@@ -403,7 +416,22 @@ class _DetailPageState extends State<DetailPage> {
   );
 
   void _locate(int index) {
-    _details!.selectGroup(index ~/ episodeGroupSize);
+    final details = _details!;
+    final scope = _resolveEpisodeScope(details);
+    if (scope.routes.length >= 2) {
+      for (final route in scope.routes) {
+        final pos = route.entries.indexWhere((entry) => entry.index == index);
+        if (pos >= 0) {
+          setState(() {
+            _selectedRoute = route.name;
+            _routeGroup = pos ~/ episodeGroupSize;
+          });
+          break;
+        }
+      }
+    } else {
+      details.selectGroup(index ~/ episodeGroupSize);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final target = _currentEpisode.currentContext;
       if (target == null || !target.mounted) return;
@@ -572,29 +600,61 @@ class _DetailPageState extends State<DetailPage> {
                 child: _episodeStatus(details),
               )
             else ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
-                  child: _episodeHeader(details, m),
-                ),
-              ),
-              if (details.groupCount > 1)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: m.chip + 2,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
-                      itemCount: details.groupCount,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (context, group) =>
-                          _groupChip(details, m, group),
-                    ),
-                  ),
-                ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                sliver: SliverToBoxAdapter(child: _swipeGroups(details, m)),
+              Builder(
+                builder: (context) {
+                  final scope = _resolveEpisodeScope(details);
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 8, 0),
+                          child: _episodeHeader(details, m, scope: scope),
+                        ),
+                      ),
+                      if (scope.routes.length > 1)
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: m.chip + 6,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 2),
+                              itemCount: scope.routes.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, index) => _routeChip(
+                                m,
+                                scope.routes[index],
+                                selected:
+                                    scope.routes[index].name == scope.routeName,
+                                currentIndex: details.currentIndex,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (scope.groupCount > 1)
+                        SliverToBoxAdapter(
+                          child: SizedBox(
+                            height: m.chip + 2,
+                            child: ListView.separated(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
+                              itemCount: scope.groupCount,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, group) =>
+                                  _groupChip(details, m, group, scope: scope),
+                            ),
+                          ),
+                        ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                        sliver: SliverToBoxAdapter(
+                          child: _swipeGroups(details, m, scope: scope),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ],
@@ -685,6 +745,9 @@ class _DetailPageState extends State<DetailPage> {
           ),
       ],
     );
+    final scope = details.episodes.isEmpty
+        ? null
+        : _resolveEpisodeScope(details);
     final episodeList = details.episodes.isEmpty
         ? SizedBox(
             key: const ValueKey('status'),
@@ -697,23 +760,42 @@ class _DetailPageState extends State<DetailPage> {
             children: [
               SizedBox(
                 height: desktop ? 44 : 48,
-                child: _episodeHeader(details, m),
+                child: _episodeHeader(details, m, scope: scope),
               ),
-              if (details.groupCount > 1)
+              if (scope != null && scope.routes.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (var group = 0; group < details.groupCount; group++)
-                        _groupChip(details, m, group),
+                      for (final route in scope.routes)
+                        _routeChip(
+                          m,
+                          route,
+                          selected: route.name == scope.routeName,
+                          currentIndex: details.currentIndex,
+                        ),
+                    ],
+                  ),
+                ),
+              if (scope != null && scope.groupCount > 1)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (var group = 0; group < scope.groupCount; group++)
+                        _groupChip(details, m, group, scope: scope),
                     ],
                   ),
                 ),
               Padding(
                 padding: const EdgeInsets.only(top: 14),
-                child: desktop ? _grid(details, m) : _swipeGroups(details, m),
+                child: desktop
+                    ? _grid(details, m, scope: scope)
+                    : _swipeGroups(details, m, scope: scope),
               ),
             ],
           );
@@ -865,16 +947,42 @@ class _DetailPageState extends State<DetailPage> {
     List<Widget> trailing = const [],
   }) {
     final drama = details.drama;
-    TextStyle sub(double size) => TextStyle(
-      fontSize: size,
-      height: 1.5,
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-    );
+    final colors = Theme.of(context).colorScheme;
+    Widget pill(String label, {Color? textColor, Color? fillColor}) =>
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color:
+                fillColor ??
+                colors.surfaceContainerHighest.withValues(alpha: 0.65),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: colors.outlineVariant.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: m.tag,
+                fontWeight: FontWeight.w500,
+                color: textColor ?? colors.onSurfaceVariant,
+              ),
+            ),
+          ),
+        );
     final meta = [
       SourceSite.byId(drama.source).name,
       if (drama.episodes > 0) '共 ${drama.episodes} 集',
       if (drama.releaseStatus.isNotEmpty && drama.releaseStatus != 'unknown')
         drama.releaseLabel,
+      if (drama.category.isNotEmpty) drama.category,
+      if (drama.source == 'huangdou')
+        drama.vipStatus == null
+            ? 'VIP 状态待补齐'
+            : drama.vip
+            ? 'VIP 内容'
+            : '免费内容',
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -890,19 +998,19 @@ class _DetailPageState extends State<DetailPage> {
             height: 1.3,
           ),
         ),
-        Text(meta.join(' · '), style: sub(m.meta)),
-        if (drama.score.isNotEmpty)
-          Text('评分 ${drama.score}', style: sub(m.meta)),
-        if (drama.category.isNotEmpty) Text(drama.category, style: sub(m.meta)),
-        if (drama.source == 'huangdou')
-          Text(
-            drama.vipStatus == null
-                ? 'VIP 状态待补齐'
-                : drama.vip
-                ? 'VIP 内容'
-                : '免费内容',
-            style: sub(m.tag),
-          ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            if (drama.score.isNotEmpty)
+              pill(
+                '★ ${drama.score}',
+                textColor: const Color(0xFFFFC542),
+                fillColor: const Color(0x28FFC542),
+              ),
+            for (final item in meta) pill(item),
+          ],
+        ),
         ...trailing,
       ],
     );
@@ -955,7 +1063,7 @@ class _DetailPageState extends State<DetailPage> {
         for (final tag in drama.tags.take(12))
           DecoratedBox(
             decoration: BoxDecoration(
-              color: colors.surfaceContainerHighest,
+              color: colors.surfaceContainerHighest.withValues(alpha: 0.65),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Padding(
@@ -1141,10 +1249,180 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
-  Widget _episodeTitle(DramaDetails details, _Metrics m) {
+  static final _numericTitlePattern = RegExp(r'^第?\s*\d{1,4}\s*集?$');
+
+  static bool _isDescriptiveLabel(String label, int number) {
+    final trimmed = label.trim();
+    if (trimmed.isEmpty ||
+        trimmed == '$number' ||
+        _numericTitlePattern.hasMatch(trimmed)) {
+      return false;
+    }
+    return true;
+  }
+
+  static String _compactEpisodeLabel(String rawLabel, int number) {
+    final trimmed = rawLabel.trim();
+    if (trimmed.isEmpty ||
+        trimmed == '第$number集' ||
+        _numericTitlePattern.hasMatch(trimmed)) {
+      return '$number';
+    }
+    return trimmed;
+  }
+
+  List<_EpisodeRoute> _extractRoutes(List<Episode> episodes) {
+    if (episodes.isEmpty) return const [];
+    final grouped = <String, List<_RouteEntry>>{};
+    for (var i = 0; i < episodes.length; i++) {
+      final episode = episodes[i];
+      final sep = episode.title.indexOf(' · ');
+      if (sep <= 0) return const [];
+      final route = episode.title.substring(0, sep).trim();
+      final label = episode.title.substring(sep + 3).trim();
+      if (route.isEmpty) return const [];
+      (grouped[route] ??= []).add((
+        episode: episode,
+        index: i,
+        label: label,
+      ));
+    }
+    if (grouped.length < 2) return const [];
+    return [
+      for (final entry in grouped.entries)
+        (name: entry.key, entries: entry.value),
+    ];
+  }
+
+  _EpisodeScope _resolveEpisodeScope(DramaDetails details) {
+    final routes = _extractRoutes(details.episodes);
+    if (routes.length < 2) {
+      return (
+        routes: const [],
+        routeName: '',
+        entries: [
+          for (final (offset, episode) in details.groupEpisodes.indexed)
+            (
+              episode: episode,
+              index: details.group * episodeGroupSize + offset,
+              label: _compactEpisodeLabel(episode.title, episode.number),
+            ),
+        ],
+        groupCount: details.groupCount,
+        group: details.group,
+      );
+    }
+    var routeName = _selectedRoute;
+    var routeGroup = _routeGroup;
+    if (_routeDramaId != details.drama.id ||
+        !routes.any((route) => route.name == routeName)) {
+      final current = details.currentIndex;
+      final matched = current == null
+          ? null
+          : routes
+                .where(
+                  (route) => route.entries.any((item) => item.index == current),
+                )
+                .firstOrNull;
+      final chosen = matched ?? routes.first;
+      routeName = chosen.name;
+      if (current != null) {
+        final pos = chosen.entries.indexWhere((item) => item.index == current);
+        routeGroup = pos >= 0 ? pos ~/ episodeGroupSize : 0;
+      } else {
+        routeGroup = 0;
+      }
+    }
+    final active = routes.firstWhere((route) => route.name == routeName);
+    final groupCount = (active.entries.length / episodeGroupSize).ceil();
+    final group = groupCount == 0 ? 0 : routeGroup.clamp(0, groupCount - 1);
+    final slice = active.entries
+        .skip(group * episodeGroupSize)
+        .take(episodeGroupSize);
+    return (
+      routes: routes,
+      routeName: active.name,
+      entries: [
+        for (final item in slice)
+          (
+            episode: item.episode,
+            index: item.index,
+            label: _compactEpisodeLabel(item.label, item.episode.number),
+          ),
+      ],
+      groupCount: groupCount,
+      group: group,
+    );
+  }
+
+  void _selectRoute(_EpisodeRoute route, int? currentIndex) {
+    final pos = currentIndex == null
+        ? -1
+        : route.entries.indexWhere((item) => item.index == currentIndex);
+    setState(() {
+      _routeDramaId = _details!.drama.id;
+      _selectedRoute = route.name;
+      _routeGroup = pos >= 0 ? pos ~/ episodeGroupSize : 0;
+    });
+  }
+
+  void _selectGroup(DramaDetails details, _EpisodeScope scope, int group) {
+    if (scope.routes.length > 1) {
+      if (group == scope.group || group < 0 || group >= scope.groupCount) {
+        return;
+      }
+      setState(() {
+        _routeDramaId = details.drama.id;
+        _selectedRoute = scope.routeName;
+        _routeGroup = group;
+      });
+      return;
+    }
+    details.selectGroup(group);
+  }
+
+  String _scopeGroupLabel(
+    DramaDetails details,
+    _EpisodeScope scope,
+    int group,
+  ) {
+    if (scope.routes.length < 2) {
+      return details.groupLabel(group);
+    }
+    final active = scope.routes.firstWhere(
+      (route) => route.name == scope.routeName,
+    );
+    final start = group * episodeGroupSize;
+    final end = (start + episodeGroupSize).clamp(0, active.entries.length) - 1;
+    return '${start + 1}-${end + 1}';
+  }
+
+  Widget _routeChip(
+    _Metrics m,
+    _EpisodeRoute route, {
+    required bool selected,
+    required int? currentIndex,
+  }) => _GroupChip(
+    label: '${route.name} (${route.entries.length})',
+    selected: selected,
+    metrics: m,
+    onPressed: () => _selectRoute(route, currentIndex),
+  );
+
+  Widget _episodeTitle(
+    DramaDetails details,
+    _Metrics m, {
+    _EpisodeScope? scope,
+  }) {
     final current = details.currentIndex;
+    final activeRoute = scope != null && scope.routes.length > 1
+        ? scope.routes.firstWhere((route) => route.name == scope.routeName)
+        : null;
     final summary = [
-      '${details.episodes.length} 集',
+      if (activeRoute != null)
+        '${activeRoute.entries.length} 集 · ${scope!.routes.length} 条线路'
+      else
+        '${details.episodes.length} 集',
       if (current != null) '当前第 ${details.episodes[current].number} 集',
     ].join(' · ');
     return Row(
@@ -1155,23 +1433,31 @@ class _DetailPageState extends State<DetailPage> {
           style: TextStyle(fontSize: m.section, fontWeight: FontWeight.w700),
         ),
         const SizedBox(width: 8),
-        Text(
-          summary,
-          style: TextStyle(
-            fontSize: m.summary,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+        Flexible(
+          child: Text(
+            summary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: m.summary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _episodeHeader(DramaDetails details, _Metrics m) => Row(
+  Widget _episodeHeader(
+    DramaDetails details,
+    _Metrics m, {
+    _EpisodeScope? scope,
+  }) => Row(
     children: [
       Expanded(
         child: Align(
           alignment: Alignment.centerLeft,
-          child: _episodeTitle(details, m),
+          child: _episodeTitle(details, m, scope: scope),
         ),
       ),
       if (details.currentIndex case final current?)
@@ -1202,20 +1488,37 @@ class _DetailPageState extends State<DetailPage> {
     await details.selectSeason(season);
   }
 
-  Widget _groupChip(DramaDetails details, _Metrics m, int group) => _GroupChip(
+  Widget _groupChip(
+    DramaDetails details,
+    _Metrics m,
+    int group, {
+    _EpisodeScope? scope,
+  }) => _GroupChip(
     key: _groupKey(group),
-    label: details.groupLabel(group),
-    selected: group == details.group,
+    label: scope == null
+        ? details.groupLabel(group)
+        : _scopeGroupLabel(details, scope, group),
+    selected: group == (scope?.group ?? details.group),
     metrics: m,
-    onPressed: () => details.selectGroup(group),
+    onPressed: () {
+      if (scope != null) {
+        _selectGroup(details, scope, group);
+      } else {
+        details.selectGroup(group);
+      }
+    },
   );
 
-  Widget _swipeGroups(DramaDetails details, _Metrics m) {
+  Widget _swipeGroups(
+    DramaDetails details,
+    _Metrics m, {
+    _EpisodeScope? scope,
+  }) {
     return SwipeSwitch(
-      index: details.group,
-      count: details.groupCount,
-      onSwitch: (group) => _swipeTo(details, group),
-      child: _grid(details, m),
+      index: scope?.group ?? details.group,
+      count: scope?.groupCount ?? details.groupCount,
+      onSwitch: (group) => _swipeTo(details, group, scope: scope),
+      child: _grid(details, m, scope: scope),
     );
   }
 
@@ -1233,8 +1536,12 @@ class _DetailPageState extends State<DetailPage> {
     return _groupKeys[group];
   }
 
-  void _swipeTo(DramaDetails details, int group) {
-    details.selectGroup(group);
+  void _swipeTo(DramaDetails details, int group, {_EpisodeScope? scope}) {
+    if (scope != null) {
+      _selectGroup(details, scope, group);
+    } else {
+      details.selectGroup(group);
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chip = _groupKey(group).currentContext;
       if (chip == null || !chip.mounted) return;
@@ -1255,22 +1562,44 @@ class _DetailPageState extends State<DetailPage> {
     });
   }
 
-  Widget _grid(DramaDetails details, _Metrics m) {
-    final extent = math.max(
-      m.cell,
-      MediaQuery.textScalerOf(context).scale(m.cellText) + 28,
-    );
+  Widget _grid(DramaDetails details, _Metrics m, {_EpisodeScope? scope}) {
     final current = details.currentIndex;
-    final start = details.group * episodeGroupSize;
-    final episodes = details.groupEpisodes;
+    final entries =
+        scope?.entries ??
+        [
+          for (final (offset, episode) in details.groupEpisodes.indexed)
+            (
+              episode: episode,
+              index: details.group * episodeGroupSize + offset,
+              label: _compactEpisodeLabel(episode.title, episode.number),
+            ),
+        ];
+    final descriptive = entries.any(
+      (entry) =>
+          entry.label.length > 4 ||
+          _isDescriptiveLabel(entry.label, entry.episode.number),
+    );
+    final television = AppScope.of(context).television;
+    final extent = descriptive
+        ? math.max(
+            television ? 64.0 : 46.0,
+            MediaQuery.textScalerOf(context).scale(m.cellText) * 2 + 18,
+          )
+        : math.max(
+            m.cell,
+            MediaQuery.textScalerOf(context).scale(m.cellText) + 28,
+          );
     Widget cell(int offset) {
-      final index = start + offset;
-      final episode = episodes[offset];
+      final entry = entries[offset];
+      final index = entry.index;
+      final episode = entry.episode;
       return _EpisodeCell(
         key: index == current
             ? _currentEpisode
-            : ValueKey('episode-${episode.number}'),
+            : ValueKey('episode-$index-${episode.number}'),
         episode: episode,
+        label: entry.label,
+        descriptive: descriptive,
         metrics: m,
         current: index == current,
         watched: current != null && index < current,
@@ -1280,7 +1609,14 @@ class _DetailPageState extends State<DetailPage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = m.columnsFor(constraints.maxWidth);
+        final columns = descriptive
+            ? math.max(
+                1,
+                ((constraints.maxWidth + m.cellGap) /
+                        ((television ? 210.0 : 148.0) + m.cellGap))
+                    .floor(),
+              )
+            : m.columnsFor(constraints.maxWidth);
         final fade = Motion.of(context, Motion.medium);
         return TweenAnimationBuilder<double>(
           tween: Tween(begin: fade == Duration.zero ? 1 : 0, end: 1),
@@ -1291,7 +1627,7 @@ class _DetailPageState extends State<DetailPage> {
           child: Column(
             spacing: m.cellGap,
             children: [
-              for (var row = 0; row < episodes.length; row += columns)
+              for (var row = 0; row < entries.length; row += columns)
                 SizedBox(
                   height: extent,
                   child: Row(
@@ -1300,7 +1636,7 @@ class _DetailPageState extends State<DetailPage> {
                     children: [
                       for (var offset = row; offset < row + columns; offset++)
                         Expanded(
-                          child: offset < episodes.length
+                          child: offset < entries.length
                               ? cell(offset)
                               : const SizedBox.shrink(),
                         ),
@@ -1373,12 +1709,16 @@ class _EpisodeCell extends StatelessWidget {
   const _EpisodeCell({
     super.key,
     required this.episode,
+    required this.label,
+    required this.descriptive,
     required this.metrics,
     required this.current,
     required this.watched,
     required this.onPressed,
   });
   final Episode episode;
+  final String label;
+  final bool descriptive;
   final _Metrics metrics;
   final bool current;
   final bool watched;
@@ -1394,7 +1734,7 @@ class _EpisodeCell extends StatelessWidget {
       radius: metrics.cellRadius,
       child: Semantics(
         button: true,
-        label: '第 ${episode.number} 集${episode.vip ? '，VIP' : ''}',
+        label: '$label${episode.vip ? '，VIP' : ''}',
         excludeSemantics: true,
         child: Material(
           color: current ? colors.primaryContainer : colors.surfaceContainer,
@@ -1406,20 +1746,31 @@ class _EpisodeCell extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 Center(
-                  child: Text(
-                    '${episode.number}',
-                    style: TextStyle(
-                      fontSize: metrics.cellText,
-                      fontWeight: current
-                          ? FontWeight.w800
-                          : watched
-                          ? FontWeight.w400
-                          : FontWeight.w600,
-                      color: current
-                          ? colors.onPrimaryContainer
-                          : watched
-                          ? colors.onSurfaceVariant
-                          : colors.onSurface,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: descriptive ? 10 : 4,
+                      vertical: descriptive ? 6 : 2,
+                    ),
+                    child: Text(
+                      label,
+                      maxLines: descriptive ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: descriptive
+                            ? math.max(12, metrics.cellText - 1.5)
+                            : metrics.cellText,
+                        fontWeight: current
+                            ? FontWeight.w800
+                            : watched
+                            ? FontWeight.w400
+                            : FontWeight.w600,
+                        color: current
+                            ? colors.onPrimaryContainer
+                            : watched
+                            ? colors.onSurfaceVariant
+                            : colors.onSurface,
+                      ),
                     ),
                   ),
                 ),

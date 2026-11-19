@@ -22,6 +22,7 @@ type SourceDescriptor struct {
 	Adult              bool
 	SkipVIPPrompt      bool
 	Aliases            []string
+	Hosts              []string
 	HostSuffixes       []string
 	MatchesHost        func(host string) bool
 	BaseURL            string

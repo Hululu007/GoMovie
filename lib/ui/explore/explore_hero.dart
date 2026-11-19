@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../models.dart';
 import '../app_scope.dart';
 import '../shell/app_shell.dart';
+import '../theme/app_theme.dart';
 import '../widgets/cover_backdrop.dart';
 import '../widgets/cover_image.dart';
 import '../widgets/drama_grid.dart';
@@ -146,13 +147,34 @@ class ExploreHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 6 * k,
       children: [
-        Text(
-          kicker,
-          style: TextStyle(
-            fontSize: metrics.meta - 1,
-            fontWeight: FontWeight.w500,
-            height: 1.3,
-            color: muted,
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 10 * k, vertical: 3 * k),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.38),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 6 * k,
+            children: [
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.brandGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: SizedBox(width: 6 * k, height: 6 * k),
+              ),
+              Text(
+                kicker,
+                style: TextStyle(
+                  fontSize: metrics.meta - 1.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ),
+            ],
           ),
         ),
         Text(
@@ -231,79 +253,95 @@ class ExploreHero extends StatelessWidget {
         ),
       ],
     );
+    final card = ClipRRect(
+      borderRadius: BorderRadius.circular(metrics.radius),
+      child: SizedBox(
+        height: metrics.height,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(color: _shade.withValues(alpha: 0.9)),
+            CoverBackdrop(
+              drama: drama,
+              sigma: 40,
+              overlay: LinearGradient(
+                stops: metrics.detail ? const [0, 0.55, 1] : const [0, 1],
+                colors: metrics.detail
+                    ? [
+                        _shade.withValues(alpha: 0.9),
+                        _shade.withValues(alpha: 0.7),
+                        _shade.withValues(alpha: 0.2),
+                      ]
+                    : [
+                        _shade.withValues(alpha: 0.88),
+                        _shade.withValues(alpha: 0.55),
+                      ],
+              ),
+            ),
+            if (!television)
+              Positioned.fill(
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: InkWell(onTap: onDetail),
+                ),
+              ),
+            Padding(
+              padding: metrics.padding,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: metrics.gap,
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(metrics.coverRadius),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x59000000),
+                          blurRadius: 20,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: SizedBox.fromSize(
+                      size: metrics.cover,
+                      child: DramaCover(
+                        drama: drama,
+                        radius: metrics.coverRadius,
+                        details: false,
+                        exploreBlur: true,
+                      ),
+                    ),
+                  ),
+                  if (metrics.width case final width?)
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: width),
+                        child: info,
+                      ),
+                    )
+                  else
+                    Expanded(child: info),
+                ],
+              ),
+            ),
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(metrics.radius),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
     return Semantics(
       container: true,
       label: kicker,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(metrics.radius),
-        child: SizedBox(
-          height: metrics.height,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              ColoredBox(color: _shade.withValues(alpha: 0.9)),
-              CoverBackdrop(
-                drama: drama,
-                sigma: 40,
-                overlay: LinearGradient(
-                  stops: metrics.detail ? const [0, 0.55, 1] : const [0, 1],
-                  colors: metrics.detail
-                      ? [
-                          _shade.withValues(alpha: 0.9),
-                          _shade.withValues(alpha: 0.7),
-                          _shade.withValues(alpha: 0.2),
-                        ]
-                      : [
-                          _shade.withValues(alpha: 0.88),
-                          _shade.withValues(alpha: 0.55),
-                        ],
-                ),
-              ),
-              Padding(
-                padding: metrics.padding,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: metrics.gap,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          metrics.coverRadius,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x59000000),
-                            blurRadius: 20,
-                            offset: Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: SizedBox.fromSize(
-                        size: metrics.cover,
-                        child: DramaCover(
-                          drama: drama,
-                          radius: metrics.coverRadius,
-                          details: false,
-                          exploreBlur: true,
-                        ),
-                      ),
-                    ),
-                    if (metrics.width case final width?)
-                      Flexible(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: width),
-                          child: info,
-                        ),
-                      )
-                    else
-                      Expanded(child: info),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: card,
     );
   }
 }
