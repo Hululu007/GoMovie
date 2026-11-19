@@ -525,7 +525,13 @@ function resolveMedia(task) {
   var seen = {};
   var order = Number(payload);
   if (order > 0 && order <= 100000 && isFinite(order)) {
-    var lines = cachedLines(sourceId, null);
+    var lines;
+    try {
+      lines = fetchLines(sourceId, null);
+      host.cacheSet("ikanbot-lines-" + sourceId, JSON.stringify(lines), LINE_TTL_MS);
+    } catch (error) {
+      lines = cachedLines(sourceId, null);
+    }
     for (var i = 0; i < lines.length; i++) {
       var episode = lineEpisode(lines[i], order);
       if (!episode || seen[episode.url]) continue;
@@ -548,8 +554,15 @@ function resolveMedia(task) {
   // 注意：根对象必须新建，不能直接用 options[0] 再把 options 挂回它的 variants，
   // 否则 media.variants[0] === media 形成循环引用，宿主序列化时报错。
   var primary = options[0];
-  var media = { url: primary.url, referer: primary.referer };
-  media.variants = options.slice();
+  var media = {
+    url: primary.url,
+    referer: primary.referer,
+    credentials: { referer: primary.referer, userAgent: UA, omitFetchMetadata: true }
+  };
+  media.variants = options.map(function (item) {
+    return { url: item.url, referer: item.referer, quality: item.quality,
+             credentials: { referer: item.referer, userAgent: UA, omitFetchMetadata: true } };
+  });
   return media;
 }
 
