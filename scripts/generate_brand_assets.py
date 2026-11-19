@@ -1,20 +1,33 @@
 import argparse
 import io
 import json
+import subprocess
 from pathlib import Path
 
-import resvg_py
 from PIL import Image, ImageDraw
 
+try:
+    import resvg_py
+except ImportError:
+    resvg_py = None
+
 root = Path(__file__).resolve().parents[1]
-parser = argparse.ArgumentParser(description='从统一图形生成各平台图标与电视横幅；需要 Pillow 和 resvg-py。')
+parser = argparse.ArgumentParser(description='从统一图形生成各平台图标与电视横幅；需要 Pillow 和 resvg-py 或 rsvg-convert。')
 parser.add_argument('--output', type=Path, default=root)
 options = parser.parse_args()
 output = options.output
 source = (root / 'scripts/brand_icon.svg').read_text(encoding='utf-8')
 
 def render(svg):
-    png = resvg_py.svg_to_bytes(svg_string=svg, width=1024, height=1024)
+    if resvg_py is not None:
+        png = resvg_py.svg_to_bytes(svg_string=svg, width=1024, height=1024)
+    else:
+        png = subprocess.run(
+            ['rsvg-convert', '-w', '1024', '-h', '1024', '-f', 'png'],
+            input=svg.encode('utf-8'),
+            capture_output=True,
+            check=True,
+        ).stdout
     return Image.open(io.BytesIO(bytes(png))).convert('RGBA')
 
 foreground = render(source)
