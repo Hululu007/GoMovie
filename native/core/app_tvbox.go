@@ -15,6 +15,7 @@ import (
 
 type tvboxSubscriptionState struct {
 	URL            string       `json:"url"`
+	Spider         string       `json:"spider,omitempty"`
 	Sites          []tvbox.Site `json:"sites"`
 	RegisteredIDs  []string     `json:"registeredIds"`
 	SupportedCount int          `json:"supportedCount"`
@@ -22,11 +23,22 @@ type tvboxSubscriptionState struct {
 }
 
 var (
-	tvboxMu      sync.Mutex
-	tvboxState   *tvboxSubscriptionState
-	tvboxLoaded  bool
-	tvboxKeySafe = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+	tvboxMu          sync.Mutex
+	tvboxState       *tvboxSubscriptionState
+	tvboxLoaded      bool
+	tvboxKeySafe     = regexp.MustCompile(`[^a-zA-Z0-9_-]+`)
+	spiderBridgeMu   sync.RWMutex
+	spiderBridgePort int
 )
+
+func (engine *nativeEngine) setSpiderBridge(port int) map[string]any {
+	spiderBridgeMu.Lock()
+	if port > 0 {
+		spiderBridgePort = port
+	}
+	spiderBridgeMu.Unlock()
+	return map[string]any{"ok": true, "port": port}
+}
 
 func (engine *nativeEngine) tvboxConfigPath() string {
 	dir := filepath.Clean(engine.directory)
@@ -56,7 +68,7 @@ func (engine *nativeEngine) tvboxEnsureLoaded() {
 	if err := json.Unmarshal(raw, &saved); err != nil {
 		return
 	}
-	saved.RegisteredIDs = registerTVBoxSitesLocked(saved.Sites)
+	saved.RegisteredIDs = registerTVBoxSitesLocked(saved.Sites, saved.Spider)
 	tvboxState = &saved
 }
 
@@ -69,7 +81,7 @@ func makeTVBoxSourceID(site tvbox.Site) string {
 	return "tvbox_" + safe
 }
 
-func registerTVBoxSitesLocked(sites []tvbox.Site) []string {
+func registerTVBoxSitesLocked(sites []tvbox.Site, spiderURL string) []string {
 	if tvboxState != nil {
 		for _, oldID := range tvboxState.RegisteredIDs {
 			Unregister(oldID)
@@ -87,6 +99,7 @@ func registerTVBoxSitesLocked(sites []tvbox.Site) []string {
 		}
 		seen[id] = true
 		siteCopy := site
+		spiderCopy := strings.TrimSpace(spiderURL)
 		Unregister(id)
 		Register(SourceDescriptor{
 			ID:             id,
@@ -94,11 +107,10 @@ func registerTVBoxSitesLocked(sites []tvbox.Site) []string {
 			Description:    "订阅源（" + string(siteCopy.Kind) + "）",
 			Group:          "tvbox",
 			GroupName:      "饭太硬订阅",
-			BaseURL:        siteCopy.API,
 			SkipVIPPrompt:  true,
 			NoHostRotation: true,
 		}, func(host Host) Provider {
-			return &tvboxProvider{id: id, site: siteCopy, host: host}
+			return &tvboxProvider{id: id, site: siteCopy, spider: spiderCopy, host: host}
 		})
 		registered = append(registered, id)
 	}
@@ -145,9 +157,10 @@ func (engine *nativeEngine) tvboxSubscribe(ctx context.Context, rawURL string) (
 	}
 
 	tvboxMu.Lock()
-	ids := registerTVBoxSitesLocked(cfg.Sites)
+	ids := registerTVBoxSitesLocked(cfg.Sites, cfg.Spider)
 	state := &tvboxSubscriptionState{
 		URL:            u,
+		Spider:         cfg.Spider,
 		Sites:          cfg.Sites,
 		RegisteredIDs:  ids,
 		SupportedCount: supported,

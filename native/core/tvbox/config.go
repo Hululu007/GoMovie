@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"runtime"
 	"strings"
 )
 
@@ -138,6 +139,9 @@ func classifySite(s Site) (SiteKind, bool) {
 	default:
 		if isHTTP && !isJS && !strings.HasPrefix(lowerAPI, "csp_") {
 			return KindT4, true
+		}
+		if strings.HasPrefix(lowerAPI, "csp_") {
+			return KindJar, runtime.GOOS == "android"
 		}
 		return KindJar, false
 	}

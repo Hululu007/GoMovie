@@ -8,10 +8,13 @@ import 'core_bridge.dart';
 
 abstract final class WebViewBridge {
   static const MethodChannel _channel = MethodChannel('gomovie/webview');
+  static const MethodChannel _spiderChannel = MethodChannel('gomovie/spider');
   static HttpServer? _server;
 
   static bool get supported =>
       !kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS);
+
+  static bool get spiderSupported => !kIsWeb && Platform.isAndroid;
 
   static bool isChallengeError(String message) =>
       message.contains('Cloudflare 人机验证') ||
@@ -25,15 +28,32 @@ abstract final class WebViewBridge {
     _server = server;
     server.listen((request) async {
       try {
+        if (request.uri.path == '/spider' && request.method == 'POST') {
+          final bodyText = await utf8.decoder.bind(request).join();
+          final payload = Map<String, dynamic>.from(
+            jsonDecode(bodyText) as Map,
+          );
+          final res = await _spiderChannel.invokeMapMethod<String, dynamic>(
+            'callSpider',
+            payload,
+          );
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'ok': res?['ok'] == true,
+              'json': res?['json'] as String? ?? '',
+              'error': res?['error'] as String? ?? '',
+            }),
+          );
+          return;
+        }
         if (request.uri.path != '/fetch') {
           request.response.statusCode = HttpStatus.notFound;
-          await request.response.close();
           return;
         }
         final target = request.uri.queryParameters['url'] ?? '';
         if (target.isEmpty) {
           request.response.statusCode = HttpStatus.badRequest;
-          await request.response.close();
           return;
         }
         final res = await _channel.invokeMapMethod<String, dynamic>(
@@ -56,6 +76,12 @@ abstract final class WebViewBridge {
       }
     });
     return server.port;
+  }
+
+  static Future<void> ensureSpiderBridge(AppRepository repo) async {
+    if (!spiderSupported) return;
+    final port = await _ensureServer();
+    await repo.registerSpiderBridge(port);
   }
 
   static Future<bool> verifySource(AppRepository repo, String source) async {

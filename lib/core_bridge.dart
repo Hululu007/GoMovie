@@ -159,6 +159,7 @@ abstract class AppRepository {
     String cookies = '',
     String userAgent = '',
   }) async {}
+  Future<void> registerSpiderBridge(int port) async {}
   Future<List<String>> suggestions(String source, String query) async =>
       const [];
   Future<Map<String, dynamic>> storage() async => {};
@@ -962,6 +963,11 @@ class NativeRepository extends AppRepository {
       'token': cookies,
       'device': userAgent,
     });
+  }
+
+  @override
+  Future<void> registerSpiderBridge(int port) async {
+    await _call({'action': 'spiderBridge', 'index': port});
   }
 
   @override

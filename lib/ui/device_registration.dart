@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../local_store.dart';
 import '../models.dart';
+import '../webview_bridge.dart';
 import 'app_scope.dart';
 import 'update_prompt.dart';
 
@@ -33,6 +34,8 @@ class _DeviceRegistrationGateState extends State<DeviceRegistrationGate> {
     if (!mounted) return;
     _devicesReady = true;
     final repository = AppScope.of(context).repository;
+    await WebViewBridge.ensureSpiderBridge(repository).catchError((_) {});
+    if (!mounted) return;
     await runStartupChecks(context, widget.store);
     if (!mounted) return;
     for (final site in SourceSite.values.where((site) => site.devices)) {

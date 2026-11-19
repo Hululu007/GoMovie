@@ -17,14 +17,81 @@ import (
 )
 
 type tvboxProvider struct {
-	id   string
-	site tvbox.Site
-	host Host
+	id     string
+	site   tvbox.Site
+	spider string
+	host   Host
 }
 
 func (p *tvboxProvider) Descriptor() SourceDescriptor {
 	desc, _ := registeredDescriptor(p.id)
 	return desc
+}
+
+func (p *tvboxProvider) callSpider(ctx context.Context, action string, params map[string]string, out any) error {
+	spiderBridgeMu.RLock()
+	port := spiderBridgePort
+	spiderBridgeMu.RUnlock()
+	if port <= 0 {
+		return errors.New("安卓 .jar 插件引擎尚未就绪，请重启应用后再试")
+	}
+	extStr := ""
+	switch v := p.site.Ext.(type) {
+	case string:
+		extStr = v
+	case nil:
+	default:
+		if b, err := json.Marshal(v); err == nil {
+			extStr = string(b)
+		}
+	}
+	reqBody := map[string]string{
+		"spider": p.spider,
+		"api":    p.site.API,
+		"ext":    extStr,
+		"action": action,
+	}
+	for k, v := range params {
+		reqBody[k] = v
+	}
+	encoded, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+	endpoint := fmt.Sprintf("http://127.0.0.1:%d/spider", port)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(string(encoded)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := webViewLocalClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	if err != nil {
+		return err
+	}
+	var res struct {
+		OK    bool   `json:"ok"`
+		JSON  string `json:"json"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return err
+	}
+	if !res.OK {
+		if res.Error != "" {
+			return errors.New(res.Error)
+		}
+		return errors.New("Spider 插件调用失败")
+	}
+	trimmed := strings.TrimSpace(res.JSON)
+	if trimmed == "" {
+		return errors.New("Spider 未返回有效数据")
+	}
+	return json.Unmarshal([]byte(trimmed), out)
 }
 
 func (p *tvboxProvider) getJSON(ctx context.Context, rawURL string, out any) error {
@@ -200,20 +267,26 @@ func anyToInt(v any) int {
 }
 
 func (p *tvboxProvider) Categories(ctx context.Context, _ bool) ([]Category, error) {
-	q := url.Values{"ac": {"list"}}
-	u, err := p.buildAPIURL(q)
-	if err != nil {
-		return nil, err
-	}
 	var resp tvboxResponse
-	if err := p.getJSON(ctx, u, &resp); err != nil {
-		return nil, err
-	}
-	if len(resp.Class) == 0 {
-		if homeURL, homeErr := p.buildAPIURL(url.Values{}); homeErr == nil {
-			var homeResp tvboxResponse
-			if p.getJSON(ctx, homeURL, &homeResp) == nil && len(homeResp.Class) > 0 {
-				resp.Class = homeResp.Class
+	if p.site.Kind == tvbox.KindJar {
+		if err := p.callSpider(ctx, "home", nil, &resp); err != nil {
+			return nil, err
+		}
+	} else {
+		q := url.Values{"ac": {"list"}}
+		u, err := p.buildAPIURL(q)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.getJSON(ctx, u, &resp); err != nil {
+			return nil, err
+		}
+		if len(resp.Class) == 0 {
+			if homeURL, homeErr := p.buildAPIURL(url.Values{}); homeErr == nil {
+				var homeResp tvboxResponse
+				if p.getJSON(ctx, homeURL, &homeResp) == nil && len(homeResp.Class) > 0 {
+					resp.Class = homeResp.Class
+				}
 			}
 		}
 	}
@@ -264,6 +337,23 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 		page = 1
 	}
 	cat := strings.TrimSpace(category)
+	var resp tvboxResponse
+	if p.site.Kind == tvbox.KindJar {
+		if cat == "" || cat == "all" {
+			if err := p.callSpider(ctx, "home", nil, &resp); err != nil {
+				return nil, false, err
+			}
+			dramas := p.toDramas(resp.List)
+			return dramas, false, nil
+		}
+		if err := p.callSpider(ctx, "category", map[string]string{"tid": cat, "pg": strconv.Itoa(page)}, &resp); err != nil {
+			return nil, false, err
+		}
+		dramas := p.toDramas(resp.List)
+		pageCount := anyToInt(resp.PageCount)
+		hasMore := pageCount > page || (pageCount == 0 && len(dramas) >= 15)
+		return dramas, hasMore, nil
+	}
 	q := url.Values{
 		"ac": {"detail"},
 		"pg": {strconv.Itoa(page)},
@@ -275,7 +365,6 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 	if err != nil {
 		return nil, false, err
 	}
-	var resp tvboxResponse
 	if err := p.getJSON(ctx, u, &resp); err != nil {
 		return nil, false, err
 	}
@@ -297,6 +386,16 @@ func (p *tvboxProvider) Search(ctx context.Context, page int, query string) ([]D
 	if page < 1 {
 		page = 1
 	}
+	var resp tvboxResponse
+	if p.site.Kind == tvbox.KindJar {
+		if err := p.callSpider(ctx, "search", map[string]string{"wd": strings.TrimSpace(query), "pg": strconv.Itoa(page)}, &resp); err != nil {
+			return nil, false, err
+		}
+		dramas := p.toDramas(resp.List)
+		pageCount := anyToInt(resp.PageCount)
+		hasMore := pageCount > page || (pageCount == 0 && len(dramas) >= 15)
+		return dramas, hasMore, nil
+	}
 	q := url.Values{
 		"ac": {"detail"},
 		"wd": {strings.TrimSpace(query)},
@@ -306,7 +405,6 @@ func (p *tvboxProvider) Search(ctx context.Context, page int, query string) ([]D
 	if err != nil {
 		return nil, false, err
 	}
-	var resp tvboxResponse
 	if err := p.getJSON(ctx, u, &resp); err != nil {
 		return nil, false, err
 	}
@@ -344,17 +442,23 @@ func tvboxTagsFromItem(item tvboxVodItem) []string {
 }
 
 func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []Chapter, error) {
-	q := url.Values{
-		"ac":  {"detail"},
-		"ids": {strings.TrimSpace(sourceID)},
-	}
-	u, err := p.buildAPIURL(q)
-	if err != nil {
-		return Drama{}, nil, err
-	}
 	var resp tvboxResponse
-	if err := p.getJSON(ctx, u, &resp); err != nil {
-		return Drama{}, nil, err
+	if p.site.Kind == tvbox.KindJar {
+		if err := p.callSpider(ctx, "detail", map[string]string{"id": strings.TrimSpace(sourceID)}, &resp); err != nil {
+			return Drama{}, nil, err
+		}
+	} else {
+		q := url.Values{
+			"ac":  {"detail"},
+			"ids": {strings.TrimSpace(sourceID)},
+		}
+		u, err := p.buildAPIURL(q)
+		if err != nil {
+			return Drama{}, nil, err
+		}
+		if err := p.getJSON(ctx, u, &resp); err != nil {
+			return Drama{}, nil, err
+		}
 	}
 	if len(resp.List) == 0 {
 		return Drama{}, nil, errors.New("未找到影片详情")
@@ -416,6 +520,8 @@ func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []C
 			videoRef := rawLink
 			if shareURL := netdisk.ExtractShareURL(rawLink); shareURL != "" {
 				videoRef = encodeNetdiskVideoRef(0, shareURL)
+			} else if p.site.Kind == tvbox.KindJar {
+				videoRef = "spider:" + url.QueryEscape(routeName) + "|" + rawLink
 			} else if before, _, ok := strings.Cut(rawLink, "$"); ok && (strings.HasPrefix(strings.ToLower(before), "http://") || strings.HasPrefix(strings.ToLower(before), "https://")) {
 				videoRef = strings.TrimSpace(before)
 			}
@@ -536,6 +642,52 @@ func (p *tvboxProvider) ResolveMedia(ctx context.Context, task Task) (ProviderMe
 	}
 	if _, _, isNetdisk := decodeNetdiskVideoRef(raw); isNetdisk {
 		return resolveNetdiskMedia(ctx, raw)
+	}
+	if strings.HasPrefix(raw, "spider:") {
+		rest := strings.TrimPrefix(raw, "spider:")
+		encodedFlag, id, _ := strings.Cut(rest, "|")
+		flag, _ := url.QueryUnescape(encodedFlag)
+		var playResp struct {
+			URL     string `json:"url"`
+			Header  any    `json:"header"`
+			Headers any    `json:"headers"`
+		}
+		if err := p.callSpider(ctx, "player", map[string]string{"flag": flag, "id": id}, &playResp); err != nil {
+			return ProviderMedia{}, err
+		}
+		resolved := strings.TrimSpace(playResp.URL)
+		if _, _, isNetdisk := decodeNetdiskVideoRef(resolved); isNetdisk {
+			return resolveNetdiskMedia(ctx, resolved)
+		}
+		if resolved == "" {
+			return ProviderMedia{}, errors.New("Spider 未返回有效播放地址")
+		}
+		hdrs := parseTVBoxHeaderMap(playResp.Header)
+		if len(hdrs) == 0 {
+			hdrs = parseTVBoxHeaderMap(playResp.Headers)
+		}
+		referer, ua, cookie := "", "", ""
+		for k, v := range hdrs {
+			switch strings.ToLower(strings.TrimSpace(k)) {
+			case "referer":
+				referer = v
+			case "user-agent":
+				ua = v
+			case "cookie":
+				cookie = v
+			}
+		}
+		media := ProviderMedia{URL: resolved, Referer: referer}
+		if ua != "" || cookie != "" || referer != "" {
+			parsed, _ := url.Parse(resolved)
+			media.Credentials = &MediaCredentials{
+				Cookie:    cookie,
+				Origin:    ProviderMediaOrigin(parsed),
+				Referer:   referer,
+				UserAgent: ua,
+			}
+		}
+		return media, nil
 	}
 	if p.site.Type == 4 && !isDirectMediaURL(raw) {
 		playURL, buildErr := p.buildAPIURL(url.Values{"play": {raw}})

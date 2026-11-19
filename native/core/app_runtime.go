@@ -422,6 +422,8 @@ func nativeDispatch(input nativeInput) (any, error) {
 		return res, nil
 	case "webViewBridge":
 		return engine.setWebViewBridge(input.Index, input.URL, input.Source, input.Token, input.Device), nil
+	case "spiderBridge":
+		return engine.setSpiderBridge(input.Index), nil
 	case "sourceChallengeUrl":
 		return map[string]any{"url": engine.sourceChallengeURL(input.Source)}, nil
 	case "moduleIndex":
