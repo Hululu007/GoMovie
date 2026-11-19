@@ -463,8 +463,7 @@ class _SearchPageState extends State<SearchPage> {
       if (_aggLoading) {
         return StatusView.loading(
           key: const ValueKey('agg-loading'),
-          title: '正在全网聚合搜索',
-          message: '已完成 $_aggDone / $_aggTotal 个站源',
+          title: '正在全网聚合搜索（$_aggDone / $_aggTotal）',
         );
       }
       if (_aggTotal > 0 && _aggErrors.length == _aggTotal) {

@@ -254,7 +254,7 @@ class _NetdiskPageState extends State<NetdiskPage> {
               padding: EdgeInsets.only(bottom: 12),
               child: LinearProgressIndicator(minHeight: 3),
             ),
-          const SectionHeader('夸克网盘账号'),
+          const SectionHeader(title: '夸克网盘账号'),
           GroupCard(
             children: [
               ListTile(
@@ -302,7 +302,7 @@ class _NetdiskPageState extends State<NetdiskPage> {
             ],
           ),
           const SizedBox(height: 16),
-          const SectionHeader('饭太硬 / TVBox 接口订阅'),
+          const SectionHeader(title: '饭太硬 / TVBox 接口订阅'),
           GroupCard(
             children: [
               Padding(
@@ -352,7 +352,7 @@ class _NetdiskPageState extends State<NetdiskPage> {
             ],
           ),
           const SizedBox(height: 16),
-          const SectionHeader('网盘分享链接直解'),
+          const SectionHeader(title: '网盘分享链接直解'),
           GroupCard(
             children: [
               Padding(
