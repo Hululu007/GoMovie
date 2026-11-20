@@ -10,3 +10,13 @@
 # 桥自身通过 MethodChannel 反射调用，保留入口
 -keep class com.gomovie.SpiderBridge { *; }
 -keep class com.gomovie.MainActivity { *; }
+
+# TVBox spider jar 在运行时链接的第三方库：R8 看不到静态引用，必须整包保留
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+-keep class com.google.gson.** { *; }
+-keep class org.jsoup.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn org.jsoup.**
+-dontwarn com.google.gson.**

@@ -84,6 +84,14 @@ kotlin {
     }
 }
 
+dependencies {
+    // TVBox spider jar 通过 DexClassLoader 在运行时链接这些库（R8 看不到引用，
+    // 所以 proguard-rules.pro 里同时 keep），缺失会报 Lokhttp3/ConnectionPool 之类。
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.11.0")
+    implementation("org.jsoup:jsoup:1.17.2")
+}
+
 flutter { source = "../.." }
 
 tasks.withType<JavaCompile>().configureEach {
