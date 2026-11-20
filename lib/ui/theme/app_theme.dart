@@ -150,7 +150,6 @@ abstract final class AppTheme {
         ),
       ),
       chipTheme: ChipThemeData(
-        height: Sizes.chip,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         labelPadding: EdgeInsets.zero,
         backgroundColor: scheme.surfaceContainerHigh,
