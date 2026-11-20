@@ -59,6 +59,12 @@ android {
         }
         release {
             signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
+            // TVBox 的 spider jar 运行时靠 DexClassLoader 继承 com.github.catvod.crawler.Spider，
+            // 不 keep 就会在真机上报 "Class not found using the boot class loader"。
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
         getByName("profile") {
             signingConfig = signingConfigs.getByName(if (hasReleaseKey) "release" else "debug")
