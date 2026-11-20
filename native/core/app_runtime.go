@@ -547,7 +547,7 @@ func (engine *nativeEngine) nativeCatalog(ctx context.Context, input nativeInput
 	if !ValidNativeCategory(source, category) {
 		return nativeCatalogResult{}, errors.New("内容分类无效")
 	}
-	cacheKey := nativeCatalogKey(source, category)
+	cacheKey := nativeCatalogKey(source, category) + nativeExtendSignature(input.Extend)
 	if err := ctx.Err(); err != nil {
 		return nativeCatalogResult{}, err
 	}

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"sort"
 	"strings"
 )
 
@@ -17,6 +18,32 @@ func nativeCatalogKey(source, category string) string {
 		return source + "|" + category
 	}
 	return source
+}
+
+// nativeExtendSignature 把二级筛选值拼成稳定的缓存键片段（键排序，避免顺序不同算两次）。
+func nativeExtendSignature(extend map[string]string) string {
+	if len(extend) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(extend))
+	for key, value := range extend {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	if len(keys) == 0 {
+		return ""
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for _, key := range keys {
+		b.WriteString("&")
+		b.WriteString(key)
+		b.WriteString("=")
+		b.WriteString(extend[key])
+	}
+	return b.String()
 }
 
 func ValidNativeCategory(source, category string) bool {
