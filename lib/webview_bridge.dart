@@ -19,6 +19,7 @@ abstract final class WebViewBridge {
   static bool isChallengeError(String message) =>
       message.contains('Cloudflare 人机验证') ||
       message.contains('完成人机验证') ||
+      message.contains('手动完成验证') ||
       message.toLowerCase().contains('just a moment');
 
   static Future<int> _ensureServer() async {
