@@ -8,6 +8,7 @@ import dalvik.system.DexClassLoader
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -55,10 +56,10 @@ class SpiderBridge(
                 val loader = ensureLoader(spiderUrl)
                 val spider = ensureSpider(loader, spiderUrl, api, ext)
                 val json = when (action) {
-                    "home" -> {
-                        val home = spider.homeContent(true)
-                        if (home.isNullOrBlank()) spider.homeVideoContent() else home
-                    }
+                    "home" -> mergeHome(
+                        runCatching { spider.homeContent(true) }.getOrNull(),
+                        runCatching { spider.homeVideoContent() }.getOrNull(),
+                    )
                     "category" -> spider.categoryContent(tid, pg, false, HashMap())
                     "search" -> {
                         try {
@@ -83,6 +84,22 @@ class SpiderBridge(
                 }
             }
         }
+    }
+
+    // 很多 jar 站源的首页推荐放在 homeVideoContent，class/filters 在 homeContent。
+    // 只取其中一个就会「有分类但没剧」，所以把两边的 list 合并。
+    private fun mergeHome(home: String?, video: String?): String {
+        if (video.isNullOrBlank()) return home ?: ""
+        val videoList = runCatching {
+            JSONObject(video).optJSONArray("list")
+        }.getOrNull() ?: return home ?: ""
+        if (videoList.length() == 0) return home ?: ""
+        if (home.isNullOrBlank()) return video
+        val homeObj = runCatching { JSONObject(home) }.getOrNull() ?: return video
+        val homeList = homeObj.optJSONArray("list")
+        if (homeList != null && homeList.length() > 0) return home
+        homeObj.put("list", videoList)
+        return homeObj.toString()
     }
 
     private fun parseSpiderURL(raw: String): Pair<String, String> {

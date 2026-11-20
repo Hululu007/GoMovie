@@ -27,7 +27,12 @@ func ValidNativeCategory(source, category string) bool {
 		return false
 	}
 	if descriptor, ok := registeredDescriptor(source); ok {
-		return descriptor.ValidCategory != nil && descriptor.ValidCategory(category)
+		// TVBox / 订阅类站源的分类是运行时从 spider 拿的（热播电影、动作片…），
+		// 没有静态清单可校验，交给 provider 自己判断，否则一律被判"内容分类无效"。
+		if descriptor.ValidCategory == nil {
+			return true
+		}
+		return descriptor.ValidCategory(category)
 	}
 	return false
 }
