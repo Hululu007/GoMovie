@@ -343,6 +343,16 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 			if err := p.callSpider(ctx, "home", nil, &resp); err != nil {
 				return nil, false, err
 			}
+			// 很多 jar 站的首页只给 class/filters，没有推荐列表；这时按第一个分类
+			// 拉一页，否则「全部」永远是空白。
+			if len(resp.List) == 0 && len(resp.Class) > 0 {
+				if first := anyToString(resp.Class[0].TypeID); first != "" {
+					var catResp tvboxResponse
+					if err := p.callSpider(ctx, "category", map[string]string{"tid": first, "pg": strconv.Itoa(page)}, &catResp); err == nil && len(catResp.List) > 0 {
+						resp = catResp
+					}
+				}
+			}
 			dramas := p.toDramas(resp.List)
 			return dramas, false, nil
 		}
@@ -441,12 +451,36 @@ func tvboxTagsFromItem(item tvboxVodItem) []string {
 	return tags
 }
 
+// tvboxSearchKeyword 从 TVBox 的"搜索型" vod_id 里取关键词：msearch:###关键词###海报
+func tvboxSearchKeyword(id string) string {
+	if !strings.HasPrefix(id, "msearch:###") {
+		return ""
+	}
+	rest := strings.TrimPrefix(id, "msearch:###")
+	if i := strings.Index(rest, "###"); i > 0 {
+		return strings.TrimSpace(rest[:i])
+	}
+	return ""
+}
+
 func (p *tvboxProvider) Detail(ctx context.Context, sourceID string) (Drama, []Chapter, error) {
 	var resp tvboxResponse
 	if p.site.Kind == tvbox.KindJar {
-		if err := p.callSpider(ctx, "detail", map[string]string{"id": strings.TrimSpace(sourceID)}, &resp); err != nil {
+		id := strings.TrimSpace(sourceID)
+		// 搜索型条目把关键词塞在 vod_id 里（msearch:###关键词###海报），
+		// detailContent 对它是空的，得先按关键词搜一次拿真实 id。
+		if kw := tvboxSearchKeyword(id); kw != "" {
+			var searchResp tvboxResponse
+			if err := p.callSpider(ctx, "search", map[string]string{"wd": kw, "pg": "1"}, &searchResp); err == nil && len(searchResp.List) > 0 {
+				if real := anyToString(searchResp.List[0].ID); real != "" {
+					id = real
+				}
+			}
+		}
+		if err := p.callSpider(ctx, "detail", map[string]string{"id": id}, &resp); err != nil {
 			return Drama{}, nil, err
 		}
+		sourceID = id
 	} else {
 		q := url.Values{
 			"ac":  {"detail"},
