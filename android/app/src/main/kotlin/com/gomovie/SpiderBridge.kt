@@ -75,6 +75,10 @@ class SpiderBridge(
                 mainHandler.post {
                     result.success(mapOf("ok" to true, "json" to (json ?: "")))
                 }
+                android.util.Log.d(
+                    "SpiderBridge",
+                    "action=$action api=$api len=${json?.length} head=${json?.take(500)}",
+                )
             } catch (t: Throwable) {
                 android.util.Log.e("SpiderBridge", "spider 执行失败 api=$api action=$action", t)
                 val rootCause = generateSequence(t) { it.cause }.last()
