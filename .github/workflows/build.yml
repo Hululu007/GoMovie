@@ -2,6 +2,11 @@ name: Build app packages
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 只出构建产物，不发 Release（跳过「版本已发布」校验）
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -62,9 +67,10 @@ jobs:
       - id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+          if [ "$GITHUB_REF" != "refs/heads/main" ] && [ "$DRY_RUN" != "true" ]; then
             echo "只能从 main 分支手动发布，当前为 $GITHUB_REF。" >&2
             exit 1
           fi
@@ -74,7 +80,7 @@ jobs:
             exit 1
           fi
           tag="app-v${version//+/-}"
-          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || gh release view "$tag" >/dev/null 2>&1; then
+          if [ "$DRY_RUN" != "true" ] && { git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || gh release view "$tag" >/dev/null 2>&1; }; then
             echo "版本 $version（$tag）已发布过，请先提升 pubspec.yaml 的 version。" >&2
             exit 1
           fi
@@ -255,6 +261,7 @@ jobs:
 
   release:
     needs: [checks, prepare, android, ios]
+    if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
