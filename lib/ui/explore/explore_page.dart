@@ -171,6 +171,7 @@ class ExplorePageState extends State<ExplorePage> {
         for (final item in filter.values) ChoiceOption(item.value, item.name),
       ],
       selected: explore.filterValue(key),
+      grid: ChoiceGrid.categories,
     );
     if (value != null) explore.setFilter(key, value);
   }
