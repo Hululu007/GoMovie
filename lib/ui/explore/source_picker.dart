@@ -75,12 +75,12 @@ class _SourcePickerState extends State<SourcePicker> {
     ];
   }
 
-  /// 订阅源的组名来自模块描述（饭太硬订阅），取不到就退回「订阅」。
+  /// 订阅源的组名来自后端（饭太硬订阅），取不到就退回「订阅」。
   String _tvboxLabel() {
     for (final site in _store.sources) {
       if (site.group == 'tvbox' && site.groupLabel.isNotEmpty) {
-        final label = site.groupLabel;
-        return label.length > 4 ? label.substring(0, 2) + '订阅' : label;
+        final label = site.groupLabel.trim();
+        return label.length > 6 ? '订阅' : label;
       }
     }
     return '订阅';
