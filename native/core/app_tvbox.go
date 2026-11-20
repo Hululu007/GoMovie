@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"os"
@@ -73,12 +75,17 @@ func (engine *nativeEngine) tvboxEnsureLoaded() {
 }
 
 func makeTVBoxSourceID(site tvbox.Site) string {
-	safe := strings.ToLower(tvboxKeySafe.ReplaceAllString(strings.TrimSpace(site.Key), "_"))
+	key := strings.TrimSpace(site.Key)
+	safe := strings.ToLower(tvboxKeySafe.ReplaceAllString(key, "_"))
 	safe = strings.Trim(safe, "_")
-	if safe == "" {
-		safe = "site"
+	// 饭太硬的 key 大量是中文（点我切源、玩偶…），只留 a-z0-9 会全被清空，
+	// 一堆站点挤成同一个 id 后在去重里只剩一个。所以永远追加 key 哈希保证唯一。
+	sum := sha1.Sum([]byte(key))
+	suffix := hex.EncodeToString(sum[:4])
+	if safe == "" || safe == "site" {
+		return "tvbox_" + suffix
 	}
-	return "tvbox_" + safe
+	return "tvbox_" + safe + "_" + suffix
 }
 
 func registerTVBoxSitesLocked(sites []tvbox.Site, spiderURL string) []string {
