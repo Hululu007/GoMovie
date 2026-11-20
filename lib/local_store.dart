@@ -518,6 +518,12 @@ class LocalStore extends ChangeNotifier {
         : sources.firstOrNull?.id ?? '';
   }
 
+  /// 站源面板上次停留的分段（''/builtin/tvbox/netdisk）。
+  String get sourceGroup => switch (_userSettings['sourceGroup']) {
+    final String value => value,
+    _ => '',
+  };
+
   DownloadPreferences get downloadPreferences {
     if (locked) return const DownloadPreferences();
     try {
@@ -606,6 +612,8 @@ class LocalStore extends ChangeNotifier {
     if (!allowsSource(value)) return Future.error(StateError('当前用户没有此站源权限'));
     return _userSetting('source', value);
   }
+
+  Future<void> setSourceGroup(String value) => _userSetting('sourceGroup', value);
 
   Future<void> setDisplayMode(String value) => _displayModes.contains(value)
       ? _setting('displayMode', value)

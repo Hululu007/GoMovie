@@ -5,27 +5,16 @@ import '../../models.dart';
 import '../search/search_page.dart';
 import '../modules/modules_page.dart';
 import '../shell/app_shell.dart';
-import '../widgets/choice_panel.dart';
+import 'source_picker.dart';
 
 Future<void> pickSource(BuildContext anchor, LocalStore store) async {
-  final value = await showChoicePanel<String>(
-    context: anchor,
-    title: '全部站源',
-    options: [
-      for (final source in store.sources) ChoiceOption(source.id, source.name),
-    ],
-    selected: store.source,
-    grid: ChoiceGrid.sources,
-    action: store.profile.admin
-        ? (
-            label: '管理站源',
-            icon: Icons.tune_rounded,
-            onPressed: () =>
-                openPage<void>(anchor, (_) => ModulesPage(store: store)),
-          )
-        : null,
-  );
-  if (value == null || value == store.source) return;
+  final value = await SourcePicker.show(anchor, store);
+  if (value == null) return;
+  if (value == SourcePicker.manageSourceId) {
+    await openPage<void>(anchor, (_) => ModulesPage(store: store));
+    return;
+  }
+  if (value == store.source) return;
   try {
     await store.setSource(value);
   } catch (_) {
