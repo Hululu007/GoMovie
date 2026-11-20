@@ -17,6 +17,9 @@ abstract final class WebViewBridge {
   static bool get spiderSupported => !kIsWeb && Platform.isAndroid;
 
   static bool isChallengeError(String message) =>
+      // CF_CHALLENGE 是 ASCII 标记：报错经过 URL 编码后中文会变成 %E8..，
+      // 只有纯 ASCII 能稳定穿过那一层。
+      message.contains('CF_CHALLENGE') ||
       message.contains('Cloudflare 人机验证') ||
       message.contains('完成人机验证') ||
       message.contains('手动完成验证') ||

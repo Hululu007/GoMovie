@@ -379,11 +379,11 @@ function fetchDocument(address) {
   } catch (error) {
     // 非 2xx（CF 的 403 挑战页）会直接抛错，body 拿不到，所以这里也要转成验证提示。
     const detail = String((error && error.message) || error || "");
-    throw new Error("MissAV 请求被拦截（" + detail.slice(0, 60) + "），请手动完成验证后重试");
+    throw new Error("CF_CHALLENGE MissAV 请求被拦截，请手动完成验证后重试");
   }
   if (isChallengePage(body)) {
     // 交给 UI：发现页/搜索页识别到「完成人机验证」会弹出验证 WebView，用户手动点一下即可
-    throw new Error("MissAV 触发 Cloudflare 人机验证，请手动完成验证后重试");
+    throw new Error("CF_CHALLENGE MissAV 触发 Cloudflare 人机验证，请手动完成验证后重试");
   }
   return htmlTree(body);
 }
