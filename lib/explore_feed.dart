@@ -131,10 +131,10 @@ class ExploreFeed extends ChangeNotifier {
     }
     final tab = _tab;
     _feeds.remove(tab.id)?.removeListener(_notify);
-    _select(tab, keepExtend: true);
+    _select(tab, keepExtend: true, refresh: true);
   }
 
-  void _select(CatalogCategory tab, {bool keepExtend = false}) {
+  void _select(CatalogCategory tab, {bool keepExtend = false, bool refresh = false}) {
     final catalog = _catalog!;
     if (recommending) unawaited(repository.cancelRecommendations());
     _tab = tab;
@@ -166,7 +166,8 @@ class ExploreFeed extends ChangeNotifier {
                 _saved(_ranking(catalog, board, ranks, page, force)),
           )
         : DramaFeed(
-            cached: () => catalog.cached(tab),
+            // 带筛选时不能用缓存首屏：缓存里是没筛选的结果，会让列表看起来"没反应"。
+            cached: _extend.isEmpty ? (() => catalog.cached(tab)) : null,
             load: (page, force) => _saved(
               catalog.fetch(
                 tab,
@@ -177,7 +178,7 @@ class ExploreFeed extends ChangeNotifier {
             ),
           );
     feed.addListener(_notify);
-    unawaited(feed.reload());
+    unawaited(feed.reload(force: refresh));
     _notify();
   }
 
