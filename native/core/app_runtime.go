@@ -663,6 +663,14 @@ func (engine *nativeEngine) nativeDetail(ctx context.Context, drama LibraryDrama
 		return nil, errors.New("请选择有效站源")
 	}
 	raw, chapters, err := p.Detail(ctx, sourceID)
+	if descriptor, ok := registeredDescriptor(source); ok && descriptor.Group == "tvbox" && (err != nil || len(chapters) == 0) {
+		// 订阅里的 jar 站源多半是聚合站：列表条目只是"去别处搜这个词"的占位符，
+		// detailContent 返回空。用片名到其它站源搜一遍，命中就换成真实站源。
+		if altSource, altID, altRaw, altChapters, ok := engine.nativeSearchElsewhere(ctx, drama.Title, source); ok {
+			raw, chapters, err = altRaw, altChapters, nil
+			source, sourceID = altSource, altID
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -681,6 +689,53 @@ func (engine *nativeEngine) nativeDetail(ctx context.Context, drama LibraryDrama
 		warning = err.Error()
 	}
 	return map[string]any{"drama": drama, "chapters": chapters, "warning": warning}, nil
+}
+
+// nativeSearchElsewhere 用片名去其它站源找一部能播的剧，给聚合型订阅源兜底。
+func (engine *nativeEngine) nativeSearchElsewhere(ctx context.Context, title, skipSource string) (string, string, Drama, []Chapter, bool) {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return "", "", Drama{}, nil, false
+	}
+	want := NativeSearchText(title)
+	// 兜底搜索最多花 15 秒，别让一次点开详情卡住整个界面。
+	searchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	for _, descriptor := range registeredDescriptors() {
+		if searchCtx.Err() != nil {
+			break
+		}
+		if descriptor.ID == skipSource || descriptor.Group == "tvbox" {
+			continue
+		}
+		p, ok := engine.downloader.provider(descriptor.ID)
+		if !ok {
+			continue
+		}
+		searcher, ok := providerAs[Searcher](p)
+		if !ok {
+			continue
+		}
+		items, _, err := searcher.Search(searchCtx, 1, title)
+		if err != nil || len(items) == 0 {
+			continue
+		}
+		for _, item := range items {
+			if !strings.Contains(NativeSearchText(item.Title), want) {
+				continue
+			}
+			_, sourceID, valid := SplitProviderDramaID(item.ID)
+			if !valid {
+				continue
+			}
+			raw, chapters, err := p.Detail(searchCtx, sourceID)
+			if err != nil || len(chapters) == 0 {
+				continue
+			}
+			return descriptor.ID, sourceID, raw, chapters, true
+		}
+	}
+	return "", "", Drama{}, nil, false
 }
 
 func (engine *nativeEngine) nativeResolve(ctx context.Context, input nativeInput) (nativePlan, error) {
