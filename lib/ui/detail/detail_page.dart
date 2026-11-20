@@ -18,6 +18,8 @@ import '../widgets/cover_image.dart';
 import '../widgets/focus_ring.dart';
 import '../widgets/follow_button.dart';
 import '../theme/motion.dart';
+import '../theme/accent.dart';
+import '../widgets/stage_backdrop.dart';
 import '../widgets/motion/motion_widgets.dart';
 import '../widgets/status_view.dart';
 import '../widgets/swipe_switch.dart';
@@ -195,6 +197,8 @@ class _DetailPageState extends State<DetailPage> {
   String _selectedRoute = '';
   int _routeGroup = 0;
   final _televisionDetail = GlobalKey<TelevisionDetailState>();
+  AccentScheme _accent = AccentScheme.fallback;
+  String _accentKey = '';
   bool _entered = false;
   PlaybackHandle? _watched;
   late final bool _direct = AppScope.formFactorOf(context) == FormFactor.phone;
@@ -444,6 +448,20 @@ class _DetailPageState extends State<DetailPage> {
     });
   }
 
+  /// 封面变了才重新取色；取到之前先用品牌色，不阻塞页面。
+  void _syncAccent(String cover) {
+    if (cover == _accentKey) return;
+    _accentKey = cover;
+    if (cover.isEmpty) {
+      _accent = AccentScheme.fallback;
+      return;
+    }
+    AccentPicker.fromUrl(cover).then((value) {
+      if (!mounted || value == null || _accentKey != cover) return;
+      setState(() => _accent = value);
+    });
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _details!,
@@ -462,11 +480,17 @@ class _DetailPageState extends State<DetailPage> {
       }
       if (_curtain) return _transition(widget.drama);
       final form = AppScope.formFactorOf(context);
+      _syncAccent(details.drama.cover);
       if (form == FormFactor.television) return _televisionPage(details);
-      if (form == FormFactor.phone || MediaQuery.sizeOf(context).width < 840) {
-        return _phonePage(details);
-      }
-      return _widePage(details, desktop: form == FormFactor.window);
+      final page = (form == FormFactor.phone ||
+              MediaQuery.sizeOf(context).width < 840)
+          ? _phonePage(details)
+          : _widePage(details, desktop: form == FormFactor.window);
+      return AccentStage(
+        accent: _accent,
+        cover: details.drama.cover,
+        child: page,
+      );
     },
   );
 
