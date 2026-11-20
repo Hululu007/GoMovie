@@ -46,3 +46,18 @@ func TestParseBase64ObfuscatedConfig(t *testing.T) {
 		t.Fatalf("unexpected sites: %+v", cfg.Sites)
 	}
 }
+
+func TestMirrorCandidates(t *testing.T) {
+	raw := "https://raw.githubusercontent.com/a/b/main/tvbox.json"
+	got := MirrorCandidates(raw)
+	if len(got) != 4 || got[0] != raw {
+		t.Fatalf("github 地址应给出直连 + 3 个镜像，实际 %v", got)
+	}
+	if plain := MirrorCandidates("https://example.com/a.json"); len(plain) != 1 {
+		t.Fatalf("非 github 地址不应加镜像，实际 %v", plain)
+	}
+	mirrored := "https://ghfast.top/https://raw.githubusercontent.com/a/b/main/x.json"
+	if list := MirrorCandidates(mirrored); len(list) != 1 {
+		t.Fatalf("已镜像地址不应再次叠加，实际 %v", list)
+	}
+}

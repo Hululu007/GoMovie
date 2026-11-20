@@ -31,6 +31,7 @@ class _NetdiskPageState extends State<NetdiskPage> {
   bool _loggedIn = false;
   String _status = '';
   String _tvboxSummary = '未订阅饭太硬 / TVBox 接口';
+  int _tvboxSupported = 0;
   List<Map<String, dynamic>> _episodes = const [];
   String _shareUrl = '';
 
@@ -63,9 +64,10 @@ class _NetdiskPageState extends State<NetdiskPage> {
       setState(() {
         _loggedIn = ready['quark'] == true;
         _status = _loggedIn ? '夸克已登录' : '夸克未登录';
+        _tvboxSupported = supported;
         _tvboxSummary = subUrl.isEmpty
             ? '未订阅饭太硬 / TVBox 接口'
-            : '已加载 $supported 个兼容站源（跳过 $skipped 个 .jar 源）';
+            : '已加载 $supported 个站源${skipped > 0 ? '，跳过 $skipped 个不支持的' : ''}';
       });
     } catch (error) {
       if (!mounted) return;
@@ -128,22 +130,31 @@ class _NetdiskPageState extends State<NetdiskPage> {
 
   Future<void> _subscribeTVBox() async {
     final url = _tvboxUrl.text.trim();
-    if (url.isEmpty) return;
-    setState(() => _loading = true);
+    if (url.isEmpty) {
+      setState(() => _tvboxSummary = '请先填写订阅地址（http/https 开头）');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _tvboxSummary = '正在同步订阅…';
+    });
     try {
       await AppScope.of(context).repository.tvboxSubscribe(url);
       await _refreshStatus();
       if (!mounted) return;
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_tvboxSummary)));
+      // 结果留在页面上，不要只弹一次 SnackBar：国内直连失败时那句提示 4 秒就没了，用户没法排查。
+      setState(() {
+        _loading = false;
+        _tvboxSummary = _tvboxSupported > 0
+            ? '订阅成功：已注册 $_tvboxSupported 个站源，回到「发现」切换站源即可使用'
+            : '订阅成功，但里面没有当前可用的站源（纯 .js / 解析型站点暂不支持）';
+      });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      setState(() {
+        _loading = false;
+        _tvboxSummary = '订阅失败：$error';
+      });
     }
   }
 

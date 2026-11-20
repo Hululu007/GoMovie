@@ -69,19 +69,66 @@ type Config struct {
 }
 
 // FetchConfig 下载并解析饭太硬 / TVBox 订阅配置。
+//
+// 直连失败时会自动换成 GitHub 加速镜像重试：国内网络下 raw.githubusercontent.com
+// 常常 ping 得通但 TLS 握手被掐，用户只会看到一句"订阅请求失败"。
 func FetchConfig(ctx context.Context, client *http.Client, rawURL string) (*Config, error) {
 	u := strings.TrimSpace(rawURL)
 	if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
 		return nil, errors.New("订阅地址必须以 http:// 或 https:// 开头")
 	}
+	if client == nil {
+		client = http.DefaultClient
+	}
+	candidates := MirrorCandidates(u)
+	var lastErr error
+	for i, candidate := range candidates {
+		cfg, err := fetchConfigOnce(ctx, client, candidate)
+		if err == nil {
+			return cfg, nil
+		}
+		lastErr = err
+		if i == 0 && len(candidates) > 1 && ctx.Err() != nil {
+			return nil, err
+		}
+	}
+	if lastErr == nil {
+		lastErr = errors.New("订阅请求失败")
+	}
+	if len(candidates) > 1 {
+		return nil, fmt.Errorf("%w（已尝试 %d 个镜像）", lastErr, len(candidates))
+	}
+	return nil, lastErr
+}
+
+// MirrorCandidates 返回依次尝试的订阅地址：先直连，再按需走 GitHub 加速镜像。
+func MirrorCandidates(rawURL string) []string {
+	u := strings.TrimSpace(rawURL)
+	out := []string{u}
+	lower := strings.ToLower(u)
+	// 已经是镜像地址就不要再套一层，否则会拼成 ghfast/ghfast/...
+	for _, prefix := range mirrorPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return out
+		}
+	}
+	if !strings.Contains(lower, "raw.githubusercontent.com") && !strings.Contains(lower, "github.com/") {
+		return out
+	}
+	for _, prefix := range mirrorPrefixes {
+		out = append(out, prefix+u)
+	}
+	return out
+}
+
+var mirrorPrefixes = []string{"https://ghfast.top/", "https://ghproxy.net/", "https://gh-proxy.com/"}
+
+func fetchConfigOnce(ctx context.Context, client *http.Client, u string) (*Config, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "okhttp/3.15")
-	if client == nil {
-		client = http.DefaultClient
-	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
