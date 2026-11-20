@@ -663,12 +663,14 @@ func (engine *nativeEngine) nativeDetail(ctx context.Context, drama LibraryDrama
 		return nil, errors.New("请选择有效站源")
 	}
 	raw, chapters, err := p.Detail(ctx, sourceID)
-	if descriptor, ok := registeredDescriptor(source); ok && descriptor.Group == "tvbox" && (err != nil || len(chapters) == 0) {
+	if _, isTVBox := p.(*tvboxProvider); isTVBox && (err != nil || len(chapters) == 0) {
 		// 订阅里的 jar 站源多半是聚合站：列表条目只是"去别处搜这个词"的占位符，
 		// detailContent 返回空。用片名到其它站源搜一遍，命中就换成真实站源。
 		if altSource, altID, altRaw, altChapters, ok := engine.nativeSearchElsewhere(ctx, drama.Title, source); ok {
 			raw, chapters, err = altRaw, altChapters, nil
 			source, sourceID = altSource, altID
+		} else if err != nil || len(chapters) == 0 {
+			return nil, errors.New("该剧在饭太硬里只有条目、没有分集，其它站源也没搜到同名资源")
 		}
 	}
 	if err != nil {
