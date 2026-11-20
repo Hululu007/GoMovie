@@ -373,7 +373,21 @@ function mediaAddress(body) {
 }
 
 function fetchDocument(address) {
-  return htmlTree(host.fetchText({ url: address, referer: siteBaseUrl + "/", userAgent }).body);
+  const body = host.fetchText({ url: address, referer: siteBaseUrl + "/", userAgent }).body || "";
+  if (isChallengePage(body)) {
+    // 交给 UI：发现页/搜索页识别到「完成人机验证」会弹出验证 WebView，用户手动点一下即可
+    throw new Error("MissAV 触发 Cloudflare 人机验证，请手动完成验证后重试");
+  }
+  return htmlTree(body);
+}
+
+function isChallengePage(body) {
+  if (!body || body.length > 60000) return false;
+  const text = String(body).toLowerCase();
+  return text.includes("just a moment") ||
+    text.includes("cf-browser-verification") ||
+    text.includes("cf_chl_opt") ||
+    (text.includes("<title>attention required") && text.includes("cloudflare"));
 }
 
 function fetchCatalogPage(page, category, query) {
