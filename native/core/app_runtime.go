@@ -83,6 +83,7 @@ type nativeInput struct {
 	Page            int                     `json:"page"`
 	Query           string                  `json:"query"`
 	Category        string                  `json:"category"`
+	Extend          map[string]string       `json:"extend"`
 	Drama           LibraryDrama            `json:"drama"`
 	Chapter         Chapter                 `json:"chapter"`
 	Index           int                     `json:"index"`
@@ -495,6 +496,9 @@ func nativeDispatch(input nativeInput) (any, error) {
 	case "categories":
 		items, err := engine.nativeCategories(ctx, input.Source, input.Force)
 		return map[string]any{"items": items}, err
+	case "filters":
+		items, err := engine.nativeFilters(ctx, input.Source)
+		return map[string]any{"items": items}, err
 	case "cover":
 		return engine.loadCover(ctx, input.Drama, input.Force)
 	case "prepareCover":
@@ -631,7 +635,11 @@ func (engine *nativeEngine) nativeCatalog(ctx context.Context, input nativeInput
 			ctx = context.WithValue(ctx, LibraryMoreKey{}, true)
 		}
 	}
-	items, result.HasMore, err = registered.CatalogPage(ctx, page, category)
+	if filtered, ok := providerAs[FilterCataloger](registered); ok && len(input.Extend) > 0 {
+		items, result.HasMore, err = filtered.CatalogPageFiltered(ctx, page, category, input.Extend)
+	} else {
+		items, result.HasMore, err = registered.CatalogPage(ctx, page, category)
+	}
 	if err != nil && len(items) == 0 {
 		return result, err
 	}

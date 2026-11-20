@@ -231,8 +231,13 @@ abstract class AppRepository {
     int page = 1,
     String query = '',
     String category = '',
+    Map<String, String> extend = const {},
     bool force = false,
   });
+  /// 二级筛选（TVBox 订阅源的 排序/地区/年份…），按分类 id 分组。
+  Future<Map<String, List<CatalogFilter>>> categoryFilters(
+    String source,
+  ) async => const {};
   Future<CatalogPage> cached(String source, {String category = ''});
   Future<String> cover(Drama drama, {bool force = false});
   bool coverCached(Drama drama) => false;
@@ -1023,11 +1028,27 @@ class NativeRepository extends AppRepository {
   }
 
   @override
+  Future<Map<String, List<CatalogFilter>>> categoryFilters(
+    String source,
+  ) async {
+    final result = await _call({'action': 'filters', 'source': source});
+    final raw = result['items'] as Map? ?? const {};
+    return {
+      for (final entry in raw.entries)
+        '${entry.key}': [
+          for (final row in (entry.value as List? ?? const []))
+            CatalogFilter.fromJson(Map<String, dynamic>.from(row as Map)),
+        ],
+    };
+  }
+
+  @override
   Future<CatalogPage> catalog(
     String source, {
     int page = 1,
     String query = '',
     String category = '',
+    Map<String, String> extend = const {},
     bool force = false,
   }) async => CatalogPage.fromJson(
     await _read(query.isEmpty ? 'catalog-$source' : 'catalog-$source-search', {
@@ -1036,6 +1057,7 @@ class NativeRepository extends AppRepository {
       'page': page,
       'query': query,
       'category': category,
+      'extend': extend,
       'force': force,
     }),
   );

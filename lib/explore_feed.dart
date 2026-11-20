@@ -29,10 +29,15 @@ class ExploreFeed extends ChangeNotifier {
   final _feeds = <String, DramaFeed>{};
   final _rankings = <String, Map<String, int>>{};
   bool _disposed = false;
+  List<CatalogFilter> _filters = const [];
+  final Map<String, String> _extend = {};
 
   SourceSite? get source => _catalog?.source;
   DramaFeed? get feed => _feed;
   CatalogCategory get tab => _tab;
+  List<CatalogFilter> get filters => _filters;
+  String filterValue(String key) => _extend[key] ?? '';
+  bool get hasFilters => _filters.isNotEmpty;
   bool get recommending => _tab.id == recommendTab.id;
 
   List<CatalogCategory> get tabs {
@@ -106,10 +111,38 @@ class ExploreFeed extends ChangeNotifier {
     _notify();
   }
 
-  void _select(CatalogCategory tab) {
+  Future<void> _loadFilters(
+    SourceCatalog catalog,
+    CatalogCategory tab,
+  ) async {
+    final list = await catalog.filters(tab);
+    if (_disposed || catalog != _catalog || _tab.id != tab.id) return;
+    if (list.isEmpty && _filters.isEmpty) return;
+    _filters = list;
+    _notify();
+  }
+
+  /// 选中某个筛选值（value 传空表示清除），然后按新条件重建列表。
+  void setFilter(String key, String value) {
+    if (value.isEmpty) {
+      _extend.remove(key);
+    } else {
+      _extend[key] = value;
+    }
+    final tab = _tab;
+    _feeds.remove(tab.id)?.removeListener(_notify);
+    _select(tab, keepExtend: true);
+  }
+
+  void _select(CatalogCategory tab, {bool keepExtend = false}) {
     final catalog = _catalog!;
     if (recommending) unawaited(repository.cancelRecommendations());
     _tab = tab;
+    if (!keepExtend) {
+      _extend.clear();
+      _filters = const [];
+    }
+    unawaited(_loadFilters(catalog, tab));
     if (_feeds[tab.id] case final kept?) {
       _feed = kept;
       _ranks = _rankings[tab.id] ?? const {};
@@ -134,8 +167,14 @@ class ExploreFeed extends ChangeNotifier {
           )
         : DramaFeed(
             cached: () => catalog.cached(tab),
-            load: (page, force) =>
-                _saved(catalog.fetch(tab, page: page, force: force)),
+            load: (page, force) => _saved(
+              catalog.fetch(
+                tab,
+                page: page,
+                force: force,
+                extend: Map<String, String>.of(_extend),
+              ),
+            ),
           );
     feed.addListener(_notify);
     unawaited(feed.reload());

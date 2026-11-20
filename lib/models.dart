@@ -132,6 +132,32 @@ class CatalogCategory {
       );
 }
 
+class CatalogFilter {
+  const CatalogFilter(this.key, this.name, this.values);
+  final String key;
+  final String name;
+  final List<CatalogFilterValue> values;
+  factory CatalogFilter.fromJson(Map<String, dynamic> json) => CatalogFilter(
+    json['key'] as String? ?? '',
+    json['name'] as String? ?? '',
+    [
+      for (final row in json['values'] as List? ?? const [])
+        CatalogFilterValue.fromJson(Map<String, dynamic>.from(row as Map)),
+    ],
+  );
+}
+
+class CatalogFilterValue {
+  const CatalogFilterValue(this.name, this.value);
+  final String name;
+  final String value;
+  factory CatalogFilterValue.fromJson(Map<String, dynamic> json) =>
+      CatalogFilterValue(
+        json['name'] as String? ?? '',
+        json['value'] as String? ?? '',
+      );
+}
+
 int intValue(Object? value) =>
     value is num ? value.toInt() : int.tryParse('$value') ?? 0;
 

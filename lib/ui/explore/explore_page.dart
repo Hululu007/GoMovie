@@ -144,6 +144,37 @@ class ExplorePageState extends State<ExplorePage> {
     }
   }
 
+  /// 筛选 chip 的文案：没选就显示分组名，选了显示「分组: 值」。
+  String _filterLabel(ExploreFeed explore, CatalogFilter filter) {
+    final value = explore.filterValue(filter.key);
+    if (value.isEmpty) return filter.name;
+    for (final item in filter.values) {
+      if (item.value == value) return '${filter.name}: ${item.name}';
+    }
+    return '${filter.name}: $value';
+  }
+
+  Future<void> _pickFilter(ExploreFeed explore, String key) async {
+    CatalogFilter? filter;
+    for (final item in explore.filters) {
+      if (item.key == key) {
+        filter = item;
+        break;
+      }
+    }
+    if (filter == null) return;
+    final value = await showChoicePanel<String>(
+      context: context,
+      title: filter.name,
+      options: [
+        const ChoiceOption('', '不限'),
+        for (final item in filter.values) ChoiceOption(item.value, item.name),
+      ],
+      selected: explore.filterValue(key),
+    );
+    if (value != null) explore.setFilter(key, value);
+  }
+
   Future<void> _pickCategory(BuildContext anchor) async {
     final explore = _explore!;
     final value = await showChoicePanel<String>(
@@ -218,14 +249,29 @@ class ExplorePageState extends State<ExplorePage> {
         padding: EdgeInsets.symmetric(
           horizontal: form == FormFactor.phone ? 0 : inset,
         ),
-        child: CategoryTabs<String>(
-          key: _tabsKey,
-          options: [
-            for (final tab in explore.tabs) ChoiceOption(tab.id, tab.name),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CategoryTabs<String>(
+              key: _tabsKey,
+              options: [
+                for (final tab in explore.tabs) ChoiceOption(tab.id, tab.name),
+              ],
+              selected: explore.tab.id,
+              onSelected: _selectTab,
+              onShowAll: _pickCategory,
+            ),
+            // 二级筛选（TVBox 订阅源才有）：排序 / 地区 / 年份…
+            if (explore.hasFilters)
+              CategoryTabs<String>(
+                options: [
+                  for (final filter in explore.filters)
+                    ChoiceOption(filter.key, _filterLabel(explore, filter)),
+                ],
+                selected: '',
+                onSelected: (key) => _pickFilter(explore, key),
+              ),
           ],
-          selected: explore.tab.id,
-          onSelected: _selectTab,
-          onShowAll: _pickCategory,
         ),
       );
       return Scaffold(

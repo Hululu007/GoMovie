@@ -45,6 +45,7 @@ class SpiderBridge(
         val wd = call.argument<String>("wd").orEmpty()
         val id = call.argument<String>("id").orEmpty()
         val flag = call.argument<String>("flag").orEmpty()
+        val extendRaw = call.argument<String>("extend").orEmpty()
 
         if (spiderUrl.isEmpty() || api.isEmpty() || action.isEmpty()) {
             result.success(mapOf("ok" to false, "error" to "缺少 spider 或 api 参数"))
@@ -60,7 +61,7 @@ class SpiderBridge(
                         runCatching { spider.homeContent(true) }.getOrNull(),
                         runCatching { spider.homeVideoContent() }.getOrNull(),
                     )
-                    "category" -> spider.categoryContent(tid, pg, false, HashMap())
+                    "category" -> spider.categoryContent(tid, pg, false, parseExtend(extendRaw))
                     "search" -> {
                         try {
                             spider.searchContent(wd, false, pg)
@@ -88,6 +89,17 @@ class SpiderBridge(
                 }
             }
         }
+    }
+
+    // 二级筛选：Go 侧把 extend 序列化成 JSON 传过来，还原成 TVBox 要的 HashMap。
+    private fun parseExtend(raw: String): HashMap<String, String> {
+        val map = HashMap<String, String>()
+        if (raw.isBlank()) return map
+        runCatching {
+            val obj = JSONObject(raw)
+            for (key in obj.keys()) map[key] = obj.optString(key)
+        }
+        return map
     }
 
     // 很多 jar 站源的首页推荐放在 homeVideoContent，class/filters 在 homeContent。

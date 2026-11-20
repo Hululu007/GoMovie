@@ -22,6 +22,7 @@ class SourceCatalog {
   List<CatalogCategory> _remote = const [];
   List<RankingBoard> _boards = const [];
   final _library = <String, Drama>{};
+  final _filters = <String, List<CatalogFilter>>{};
 
   static const recommendGenre = 'find_drama';
   static const topicPrefix = 'tag:';
@@ -88,14 +89,29 @@ class SourceCatalog {
     CatalogCategory category, {
     int page = 1,
     bool force = false,
+    Map<String, String> extend = const {},
   }) async {
     final result = await repository.catalog(
       source.id,
       category: _request(category),
       page: page,
+      extend: extend,
       force: force,
     );
     return _within(category, result);
+  }
+
+  /// 该分类的二级筛选项（只有 TVBox 订阅源会给）。
+  Future<List<CatalogFilter>> filters(CatalogCategory category) async {
+    final id = _request(category);
+    if (id.isEmpty) return const [];
+    if (_filters.containsKey(id)) return _filters[id]!;
+    List<CatalogFilter> list = const [];
+    try {
+      list = (await repository.categoryFilters(source.id))[id] ?? const [];
+    } catch (_) {}
+    _filters[id] = list;
+    return list;
   }
 
   Future<CatalogPage> recommendations({

@@ -37,6 +37,29 @@ func ValidNativeCategory(source, category string) bool {
 	return false
 }
 
+// nativeFilters 返回某站源每个分类的二级筛选项（TVBox filters）。
+// 不支持的站源返回空表，前端自然不显示筛选条。
+func (engine *nativeEngine) nativeFilters(ctx context.Context, source string) (map[string][]CategoryFilter, error) {
+	source = canonicalProviderSource(source)
+	empty := map[string][]CategoryFilter{}
+	p, ok := engine.downloader.provider(source)
+	if !ok {
+		return empty, errors.New("请选择有效站源")
+	}
+	filtered, ok := providerAs[FilterCataloger](p)
+	if !ok {
+		return empty, nil
+	}
+	filters, err := filtered.CategoryFilters(ctx)
+	if err != nil {
+		return empty, err
+	}
+	if filters == nil {
+		return empty, nil
+	}
+	return filters, nil
+}
+
 func (engine *nativeEngine) nativeCategories(ctx context.Context, source string, force bool) ([]Category, error) {
 	source = canonicalProviderSource(source)
 	all := []Category{{Name: "全部"}}

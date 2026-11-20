@@ -29,6 +29,11 @@ func (p *tvboxProvider) Descriptor() SourceDescriptor {
 }
 
 func (p *tvboxProvider) callSpider(ctx context.Context, action string, params map[string]string, out any) error {
+	return p.callSpiderExt(ctx, action, params, nil, out)
+}
+
+// callSpiderExt 比 callSpider 多一个 extend：TVBox 的二级筛选值靠它传给 spider。
+func (p *tvboxProvider) callSpiderExt(ctx context.Context, action string, params, extend map[string]string, out any) error {
 	spiderBridgeMu.RLock()
 	port := spiderBridgePort
 	spiderBridgeMu.RUnlock()
@@ -53,6 +58,11 @@ func (p *tvboxProvider) callSpider(ctx context.Context, action string, params ma
 	}
 	for k, v := range params {
 		reqBody[k] = v
+	}
+	if len(extend) > 0 {
+		if raw, err := json.Marshal(extend); err == nil {
+			reqBody["extend"] = string(raw)
+		}
 	}
 	encoded, err := json.Marshal(reqBody)
 	if err != nil {
@@ -232,6 +242,14 @@ type tvboxResponse struct {
 		TypeID   any    `json:"type_id"`
 		TypeName string `json:"type_name"`
 	} `json:"class"`
+	Filters map[string][]struct {
+		Key   string `json:"key"`
+		Name  string `json:"name"`
+		Value []struct {
+			N string `json:"n"`
+			V string `json:"v"`
+		} `json:"value"`
+	} `json:"filters"`
 	List []tvboxVodItem `json:"list"`
 }
 
@@ -304,6 +322,43 @@ func (p *tvboxProvider) Categories(ctx context.Context, _ bool) ([]Category, err
 	return cats, nil
 }
 
+// CategoryFilters 返回每个分类的二级筛选项（TVBox 配置里的 filters 字段）。
+func (p *tvboxProvider) CategoryFilters(ctx context.Context) (map[string][]CategoryFilter, error) {
+	var resp tvboxResponse
+	if p.site.Kind == tvbox.KindJar {
+		if err := p.callSpider(ctx, "home", nil, &resp); err != nil {
+			return nil, err
+		}
+	} else {
+		q := url.Values{"ac": {"list"}}
+		u, err := p.buildAPIURL(q)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.getJSON(ctx, u, &resp); err != nil {
+			return nil, err
+		}
+	}
+	out := make(map[string][]CategoryFilter, len(resp.Filters))
+	for tid, groups := range resp.Filters {
+		list := make([]CategoryFilter, 0, len(groups))
+		for _, group := range groups {
+			items := make([]CategoryFilterItem, 0, len(group.Value))
+			for _, item := range group.Value {
+				items = append(items, CategoryFilterItem{Name: item.N, Value: item.V})
+			}
+			if group.Key == "" || len(items) == 0 {
+				continue
+			}
+			list = append(list, CategoryFilter{Key: group.Key, Name: group.Name, Values: items})
+		}
+		if len(list) > 0 {
+			out[tid] = list
+		}
+	}
+	return out, nil
+}
+
 func (p *tvboxProvider) toDramas(items []tvboxVodItem) []Drama {
 	out := make([]Drama, 0, len(items))
 	for _, item := range items {
@@ -333,6 +388,11 @@ func (p *tvboxProvider) toDramas(items []tvboxVodItem) []Drama {
 }
 
 func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category string) ([]Drama, bool, error) {
+	return p.CatalogPageFiltered(ctx, page, category, nil)
+}
+
+// CatalogPageFiltered 带上二级筛选（extend）请求列表，TVBox 的筛选值就是这么传的。
+func (p *tvboxProvider) CatalogPageFiltered(ctx context.Context, page int, category string, extend map[string]string) ([]Drama, bool, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -356,7 +416,7 @@ func (p *tvboxProvider) CatalogPage(ctx context.Context, page int, category stri
 			dramas := p.toDramas(resp.List)
 			return dramas, false, nil
 		}
-		if err := p.callSpider(ctx, "category", map[string]string{"tid": cat, "pg": strconv.Itoa(page)}, &resp); err != nil {
+		if err := p.callSpiderExt(ctx, "category", map[string]string{"tid": cat, "pg": strconv.Itoa(page)}, extend, &resp); err != nil {
 			return nil, false, err
 		}
 		dramas := p.toDramas(resp.List)
