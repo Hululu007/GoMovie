@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'motion.dart';
+import 'tokens.dart';
 
 abstract final class AppTheme {
   static const crimson = Color(0xFFFF2E54);
   static const gold = Color(0xFFFF9E2C);
   static const brandGradient = LinearGradient(
     colors: [crimson, gold],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  /// 品牌渐变必须跟着当前主题色走，否则换主题色后图标/角标还是红金。
+  static LinearGradient gradientFor(ColorScheme scheme) => LinearGradient(
+    colors: [scheme.primary, Color.lerp(scheme.primary, scheme.tertiary, 0.65)!],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
@@ -112,7 +120,150 @@ abstract final class AppTheme {
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
+        ),
+        showDragHandle: true,
+        dragHandleColor: scheme.outlineVariant,
+      ),
+      // ---- 以下为「所有控件统一品牌风格」：规格来自 tokens.dart，页面里不要再写死 ----
+      filledButtonTheme: FilledButtonThemeData(
+        style: _filled(scheme, background: scheme.primary, foreground: scheme.onPrimary),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: _filled(scheme, background: scheme.primary, foreground: scheme.onPrimary),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(style: _outlined(scheme)),
+      textButtonTheme: TextButtonThemeData(style: _text(scheme)),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(
+            Size(Sizes.button, Sizes.button),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+          ),
+          overlayColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.pressed)
+                ? scheme.onSurface.withValues(alpha: 0.10)
+                : null,
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        height: Sizes.chip,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        labelPadding: EdgeInsets.zero,
+        backgroundColor: scheme.surfaceContainerHigh,
+        selectedColor: scheme.primary.withValues(alpha: 0.16),
+        disabledColor: scheme.surfaceContainerHigh,
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        labelStyle: TextStyle(
+          fontSize: TypeScale.body,
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurfaceVariant,
+        ),
+        secondaryLabelStyle: TextStyle(
+          fontSize: TypeScale.body,
+          fontWeight: FontWeight.w600,
+          color: scheme.primary,
+        ),
+        showCheckmark: false,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainerHigh,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
+        hintStyle: TextStyle(
+          fontSize: TypeScale.body,
+          color: scheme.onSurfaceVariant,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.sm),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.sm),
+          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.sm),
+          borderSide: BorderSide(color: scheme.primary, width: 1.4),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        minVerticalPadding: 12,
+        horizontalTitleGap: 14,
+        iconColor: scheme.onSurfaceVariant,
+        titleTextStyle: TextStyle(
+          fontSize: TypeScale.title,
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurface,
+        ),
+        subtitleTextStyle: TextStyle(
+          fontSize: TypeScale.label,
+          color: scheme.onSurfaceVariant,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.onPrimary
+              : scheme.onSurfaceVariant,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.primary
+              : scheme.surfaceContainerHighest,
+        ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.surfaceContainerHighest,
+        circularTrackColor: scheme.surfaceContainerHighest,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: scheme.surfaceContainerHigh,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+        ),
+        textStyle: TextStyle(fontSize: TypeScale.title, color: scheme.onSurface),
+      ),
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(Radii.xs),
+        ),
+        textStyle: TextStyle(fontSize: TypeScale.label, color: scheme.onSurface),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: scheme.onSurface,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        indicatorColor: scheme.primary,
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        labelStyle: TextStyle(fontSize: TypeScale.title, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: TypeScale.title, fontWeight: FontWeight.w500),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(0, Sizes.chip)),
+          textStyle: WidgetStatePropertyAll(
+            TextStyle(fontSize: TypeScale.body, fontWeight: FontWeight.w600),
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.pill)),
+          ),
         ),
       ),
     );
@@ -155,6 +306,46 @@ abstract final class AppTheme {
     );
     return television ? _television(titled) : titled;
   }
+
+  static ButtonStyle _filled(
+    ColorScheme scheme, {
+    required Color background,
+    required Color foreground,
+  }) => FilledButton.styleFrom(
+    minimumSize: const Size(0, Sizes.button),
+    padding: const EdgeInsets.symmetric(horizontal: 18),
+    backgroundColor: background,
+    foregroundColor: foreground,
+    textStyle: const TextStyle(
+      fontSize: TypeScale.title,
+      fontWeight: FontWeight.w700,
+    ),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
+  );
+
+  static ButtonStyle _outlined(ColorScheme scheme) => OutlinedButton.styleFrom(
+    minimumSize: const Size(0, Sizes.button),
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    foregroundColor: scheme.onSurface,
+    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+    textStyle: const TextStyle(
+      fontSize: TypeScale.title,
+      fontWeight: FontWeight.w600,
+    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.md)),
+  );
+
+  static ButtonStyle _text(ColorScheme scheme) => TextButton.styleFrom(
+    minimumSize: const Size(0, Sizes.button),
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    foregroundColor: scheme.onSurface,
+    textStyle: const TextStyle(
+      fontSize: TypeScale.title,
+      fontWeight: FontWeight.w600,
+    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.sm)),
+  );
 
   static ThemeData _television(ThemeData theme) {
     final colors = theme.colorScheme;
