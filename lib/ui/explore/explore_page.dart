@@ -38,6 +38,7 @@ class ExplorePage extends StatefulWidget {
 
 class ExplorePageState extends State<ExplorePage> {
   ExploreFeed? _explore;
+  bool _filtersOpen = false;
   final _scroll = ScrollController();
   final _search = TextEditingController();
   final _tabsKey = GlobalKey();
@@ -79,9 +80,16 @@ class ExplorePageState extends State<ExplorePage> {
   }
 
   void _selectTab(String id) {
-    if (id != _explore!.tab.id) {
-      _explore!.select(id);
+    final explore = _explore!;
+    if (id != explore.tab.id) {
+      explore.select(id);
+      if (explore.hasFilters && !_filtersOpen) {
+        setState(() => _filtersOpen = true);
+      }
       return;
+    }
+    if (explore.hasFilters) {
+      setState(() => _filtersOpen = !_filtersOpen);
     }
     if (!_scroll.hasClients || _scroll.offset <= 0) return;
     unawaited(
@@ -265,16 +273,24 @@ class ExplorePageState extends State<ExplorePage> {
               onSelected: _selectTab,
               onShowAll: _pickCategory,
             ),
-            // 二级筛选（TVBox 订阅源才有）：排序 / 地区 / 年份…
-            if (explore.hasFilters)
-              CategoryTabs<String>(
-                options: [
-                  for (final filter in explore.filters)
-                    ChoiceOption(filter.key, _filterLabel(explore, filter)),
-                ],
-                selected: '',
-                onSelected: (key) => _pickFilter(explore, key),
-              ),
+            // 二级筛选（TVBox 订阅源才有）：点击分类选项卡后再展开
+            AnimatedSize(
+              duration: Motion.of(context, Motion.medium),
+              curve: Motion.standard,
+              child: explore.hasFilters && _filtersOpen
+                  ? CategoryTabs<String>(
+                      options: [
+                        for (final filter in explore.filters)
+                          ChoiceOption(
+                            filter.key,
+                            _filterLabel(explore, filter),
+                          ),
+                      ],
+                      selected: '',
+                      onSelected: (key) => _pickFilter(explore, key),
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       );
