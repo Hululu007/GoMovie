@@ -214,22 +214,36 @@ class ExploreHero extends StatelessWidget {
               children: [
                 FocusRing(
                   radius: 999,
-                  child: FilledButton.icon(
-                    autofocus: television && ShellForeground.of(context),
-                    onPressed: onPlay,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.primaryFixedDim,
-                      foregroundColor: colors.onPrimaryFixed,
-                      minimumSize: buttonSize,
-                      padding: EdgeInsets.fromLTRB(14 * k, 0, 20 * k, 0),
-                      iconSize: 18 * k,
-                      textStyle: TextStyle(
-                        fontSize: metrics.meta,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.brandGradient,
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF2E54).withValues(alpha: 0.35),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(action),
+                    child: FilledButton.icon(
+                      autofocus: television && ShellForeground.of(context),
+                      onPressed: onPlay,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        minimumSize: buttonSize,
+                        padding: EdgeInsets.fromLTRB(14 * k, 0, 20 * k, 0),
+                        iconSize: 18 * k,
+                        textStyle: TextStyle(
+                          fontSize: metrics.meta,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: Text(action),
+                    ),
                   ),
                 ),
                 if (metrics.detail)

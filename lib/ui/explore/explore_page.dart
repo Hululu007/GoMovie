@@ -9,9 +9,10 @@ import '../../models.dart';
 import '../../webview_bridge.dart';
 import '../app_scope.dart';
 import '../cover_blur.dart';
+import '../detail/detail_page.dart';
+import '../settings/settings_page.dart';
 import '../shell/app_shell.dart';
 import '../theme/motion.dart';
-import '../detail/detail_page.dart';
 import '../widgets/bar_button.dart';
 import '../widgets/category_tabs.dart';
 import '../widgets/choice_panel.dart';
@@ -19,6 +20,7 @@ import '../widgets/drama_grid.dart';
 import '../widgets/follow_button.dart';
 import '../widgets/motion/motion_widgets.dart';
 import '../widgets/page_header.dart';
+import '../widgets/shimmer_skeleton.dart';
 import '../widgets/source_bar.dart';
 import '../widgets/status_view.dart';
 import '../widgets/swipe_switch.dart';
@@ -385,7 +387,7 @@ class ExplorePageState extends State<ExplorePage> {
 
   Widget _status(DramaFeed feed) {
     if (feed.loading) {
-      return const StatusView.loading(key: ValueKey('loading'));
+      return const ExploreSkeleton(key: ValueKey('loading'));
     }
     if (feed.error.isNotEmpty) {
       final isChallenge =
@@ -411,6 +413,11 @@ class ExplorePageState extends State<ExplorePage> {
             return;
           }
           feed.reload(force: true);
+        },
+        secondaryAction: '网络代理',
+        onSecondaryAction: () async {
+          await openProxySettings(context, AppScope.of(context).store);
+          if (mounted) feed.reload(force: true);
         },
       );
     }

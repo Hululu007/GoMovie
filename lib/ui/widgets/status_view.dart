@@ -11,6 +11,8 @@ class StatusView extends StatelessWidget {
     this.icon = Icons.movie_filter_outlined,
     this.action,
     this.onAction,
+    this.secondaryAction,
+    this.onSecondaryAction,
     this.autofocus = false,
   }) : loading = false;
 
@@ -19,6 +21,8 @@ class StatusView extends StatelessWidget {
       icon = null,
       action = null,
       onAction = null,
+      secondaryAction = null,
+      onSecondaryAction = null,
       autofocus = false,
       loading = true;
 
@@ -27,6 +31,8 @@ class StatusView extends StatelessWidget {
   final IconData? icon;
   final String? action;
   final VoidCallback? onAction;
+  final String? secondaryAction;
+  final VoidCallback? onSecondaryAction;
   final bool autofocus;
   final bool loading;
 
@@ -66,15 +72,31 @@ class StatusView extends StatelessWidget {
                 ),
               ),
             ],
-            if (action case final action?) ...[
+            if (action != null || secondaryAction != null) ...[
               const SizedBox(height: 24),
-              FocusRing(
-                radius: 999,
-                child: FilledButton.tonal(
-                  autofocus: autofocus,
-                  onPressed: onAction,
-                  child: Text(action),
-                ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (action case final action?)
+                    FocusRing(
+                      radius: 999,
+                      child: FilledButton.tonal(
+                        autofocus: autofocus,
+                        onPressed: onAction,
+                        child: Text(action),
+                      ),
+                    ),
+                  if (secondaryAction case final secondary?)
+                    FocusRing(
+                      radius: 999,
+                      child: OutlinedButton(
+                        onPressed: onSecondaryAction,
+                        child: Text(secondary),
+                      ),
+                    ),
+                ],
               ),
             ],
           ],

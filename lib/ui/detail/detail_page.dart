@@ -12,6 +12,7 @@ import '../app_scope.dart';
 import '../downloads/download_picker_page.dart';
 import '../player/playback_handle.dart';
 import '../player/playback_page.dart';
+import '../settings/settings_page.dart';
 import '../shell/app_shell.dart';
 import '../widgets/cover_backdrop.dart';
 import '../widgets/cover_image.dart';
@@ -1276,6 +1277,13 @@ class _DetailPageState extends State<DetailPage> {
         }
         details.load();
       },
+      secondaryAction: error != null ? '网络代理' : null,
+      onSecondaryAction: error != null
+          ? () async {
+              await openProxySettings(context, AppScope.of(context).store);
+              if (mounted) details.load();
+            }
+          : null,
       autofocus: autofocus,
     );
   }

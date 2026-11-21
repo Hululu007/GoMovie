@@ -12,6 +12,7 @@ import '../../source_catalog.dart';
 import '../../webview_bridge.dart';
 import '../app_scope.dart';
 import '../detail/detail_page.dart';
+import '../settings/settings_page.dart';
 import '../shell/app_shell.dart';
 import '../theme/motion.dart';
 import '../widgets/drama_grid.dart';
@@ -405,6 +406,11 @@ class _SearchPageState extends State<SearchPage> {
               return;
             }
             results.reload();
+          },
+          secondaryAction: '网络代理',
+          onSecondaryAction: () async {
+            await openProxySettings(context, AppScope.of(context).store);
+            if (mounted) results.reload();
           },
         );
       }
