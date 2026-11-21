@@ -243,7 +243,7 @@ class _GoMovieAppState extends State<GoMovieApp> with WidgetsBindingObserver {
           : CoverBlur.off;
     }
     final coverBlur = _coverBlur ?? CoverBlur.off;
-    final systemColor = (store?.followSystemColor ?? true)
+    final systemColor = (store?.followSystemColor ?? false)
         ? _systemColor
         : null;
     final seed =
@@ -276,7 +276,7 @@ class _GoMovieAppState extends State<GoMovieApp> with WidgetsBindingObserver {
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: _themes.$1,
       darkTheme: _themes.$2,
-      themeMode: AppTheme.mode(store?.themeMode ?? 'system'),
+      themeMode: AppTheme.mode(store?.themeMode ?? 'dark'),
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: AppTheme.systemBars(Theme.of(context).brightness),
         child: Focus(

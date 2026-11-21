@@ -487,10 +487,10 @@ class LocalStore extends ChangeNotifier {
 
   String get themeMode {
     final value = _settings['themeMode'];
-    return _themeModes.contains(value) ? value as String : 'system';
+    return _themeModes.contains(value) ? value as String : 'dark';
   }
 
-  bool get followSystemColor => _flag('followSystemColor', true);
+  bool get followSystemColor => _flag('followSystemColor', false);
   ThemeColor get themeColor =>
       ThemeColor.byName(_settings['themeColor']) ?? ThemeColor.crimson;
   bool get sideBarExpanded => preferences.getBool('sideBarExpanded') ?? true;
