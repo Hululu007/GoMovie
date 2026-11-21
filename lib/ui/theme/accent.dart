@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -149,7 +150,7 @@ abstract final class AccentPicker {
     final g = sums[best][1] / w;
     final b = sums[best][2] / w;
     final hsl = _hsl(r, g, b);
-    return _clamp(hsl[0], hsl[1], hsl[2], source);
+    return _clamp(hsl[0], hsl[1], hsl[2], source: source);
   }
 
   /// 饱和度夹到 0.45–0.80；亮度抬到与深底对比 ≥ 4.5。
