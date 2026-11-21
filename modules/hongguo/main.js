@@ -2399,7 +2399,61 @@ function selectAppMedia(model) {
   throw noMedia("已跳过不支持的编码，其余线路没有播放地址");
 }
 
+// 网页播放页已不再内联 video_player_info，改为独立接口取流（免登录）。
+function webPlayInfo(videoId) {
+  let response;
+  try {
+    response = host.fetch({
+      method: "POST",
+      url: siteBaseUrl + "/api/video/protected/fallback-play-info?aid=8662",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        Accept: "application/json",
+        Referer: siteBaseUrl + "/",
+        Origin: siteBaseUrl,
+        "User-Agent": appUserAgent,
+      },
+      body: JSON.stringify({ item_id: String(videoId) }),
+      limit: 256 * 1024,
+      timeoutMs: 12000,
+      followRedirects: true,
+      anyStatus: true,
+    });
+  } catch (error) {
+    return null;
+  }
+  if (response.status !== 200 || typeof response.body !== "string" || response.body.length === 0) {
+    return null;
+  }
+  let result;
+  try {
+    result = parseJson(response.body);
+  } catch (error) {
+    return null;
+  }
+  if (!isRecord(result)) {
+    return null;
+  }
+  const addresses = mediaAddresses(result);
+  if (addresses.length === 0) {
+    return null;
+  }
+  const referer = siteBaseUrl + "/";
+  const duration = parseNumber(mapString(result, "duration"));
+  const durationMs = Number.isFinite(duration) ? Math.trunc(duration * secondMs) : 0;
+  return {
+    url: addresses[0],
+    referer,
+    durationMs,
+    variants: addresses.map((address) => ({ url: address, referer, durationMs })),
+  };
+}
+
 function webMedia(seriesId, videoId) {
+  const direct = webPlayInfo(videoId);
+  if (direct !== null) {
+    return direct;
+  }
   const body = fetchSiteText(siteBaseUrl + "/player/" + encodeURIComponent(seriesId) + "/" + encodeURIComponent(videoId));
   const page = routerLoaderMap(parseRouterData(body), "player_", "player_page");
   if (mapString(page, "vid") !== videoId || mapString(page, "series_id") !== seriesId) {
