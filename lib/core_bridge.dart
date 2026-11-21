@@ -134,11 +134,6 @@ abstract class AppRepository {
       throw AppFailure('当前环境不支持卸载模块');
   Map<String, int> missingSourceDownloads() => const {};
   // 网盘通道（扫码登录 + 分享解析 + 直链播放），默认不支持，由本地核心实现覆盖。
-  Future<Map<String, dynamic>> hongguoStatus() async => const {};
-  Future<Map<String, dynamic>> hongguoLogin() async => const {};
-  Future<Map<String, dynamic>> hongguoLoginPoll(String session) async =>
-      const {};
-  Future<void> hongguoLogout() async {}
   Future<Map<String, dynamic>> netdiskStatus() async => const {};
   Future<Map<String, dynamic>> netdiskLogin() async =>
       throw AppFailure('当前环境不支持网盘登录');
@@ -894,22 +889,6 @@ class NativeRepository extends AppRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> hongguoStatus() async =>
-      await _call({'action': 'hongguoStatus'});
-
-  @override
-  Future<Map<String, dynamic>> hongguoLogin() async =>
-      await _call({'action': 'hongguoLogin'});
-
-  @override
-  Future<Map<String, dynamic>> hongguoLoginPoll(String session) async =>
-      await _call({'action': 'hongguoLoginPoll', 'session': session});
-
-  @override
-  Future<void> hongguoLogout() async {
-    await _call({'action': 'hongguoLogout'});
-  }
-
   Future<Map<String, dynamic>> netdiskStatus() async =>
       await _call({'action': 'netdiskStatus'});
 

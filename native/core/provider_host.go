@@ -151,11 +151,6 @@ func (d *Downloader) Fetch(ctx context.Context, input HTTPRequest) (HTTPResponse
 			request.Header.Set("User-Agent", bridgeUA)
 		}
 	}
-	if request.Header.Get("Cookie") == "" && hongguoNeedsCookie(input.URL) {
-		if cookie := d.hongguoCookieValue(); cookie != "" {
-			request.Header.Set("Cookie", cookie)
-		}
-	}
 	if input.Ticket != 0 {
 		release, reserved := d.takeReservation(input.Ticket)
 		if !reserved {

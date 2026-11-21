@@ -16,7 +16,6 @@ import '../../resource_settings_editor.dart';
 import '../../window_on_top.dart';
 import '../app_scope.dart';
 import '../netdisk/netdisk_page.dart';
-import 'hongguo_login_page.dart';
 import '../player/danmaku_settings.dart';
 import '../update_prompt.dart';
 import '../users/users_view.dart';
@@ -136,16 +135,6 @@ class SettingsSection extends StatelessWidget {
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => NetdiskPage(store: store)),
-          ),
-        ),
-        SettingsTile(
-          title: '红果账号',
-          subtitle: '扫码登录红果，播放需要登录的剧集；凭据只存本机',
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => HongguoLoginPage(store: store),
-            ),
           ),
         ),
       ],
