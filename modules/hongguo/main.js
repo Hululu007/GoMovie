@@ -2254,16 +2254,18 @@ function resolveVideoMedia(task) {
   if (!numericId(videoId) || !numericId(seriesId)) {
     throw new Error("红果章节 ID 无效，请重新获取章节");
   }
-  let nativeError;
-  try {
-    return appMedia(videoId);
-  } catch (error) {
-    nativeError = error;
-  }
+  // App 签名接口目前对所有人返回空 body（换版本/换域名/去掉签名都一样），
+  // 先走网页接口能立刻拿到地址；App 接口保留兜底，等它恢复再自动用回多清晰度。
+  let webError;
   try {
     return webMedia(seriesId, videoId);
-  } catch (pageError) {
-    throw new Error("红果 App 取流失败：" + message(nativeError) + "；网页取流失败：" + message(pageError));
+  } catch (error) {
+    webError = error;
+  }
+  try {
+    return appMedia(videoId);
+  } catch (nativeError) {
+    throw new Error("红果取流失败：网页接口：" + message(webError) + "；App 接口：" + message(nativeError));
   }
 }
 
