@@ -210,6 +210,9 @@ func (engine *nativeEngine) saveResourceSettings(settings nativeResourceSettings
 	}
 	engine.settingsMu.Lock()
 	defer engine.settingsMu.Unlock()
+	if settings.SourceNetworkModes == nil && len(engine.settings.SourceNetworkModes) > 0 {
+		settings.SourceNetworkModes = engine.settings.SourceNetworkModes
+	}
 	data, err := json.Marshal(settings)
 	if err == nil {
 		err = nativeDownloadWrite(filepath.Join(engine.directory, "resource-settings.json"), data)

@@ -257,10 +257,17 @@ class _SourcePickerState extends State<SourcePicker> {
       grid: ChoiceGrid.sources,
     );
     if (selected == null || selected == current || !mounted) return;
-    final repo = AppScope.of(context).repository;
-    await repo.setSourceNetworkMode(site.id, selected);
-    await _store.setSourceNetworkMode(site.id, selected);
-    if (mounted) setState(() {});
+    try {
+      final repo = AppScope.of(context).repository;
+      await repo.setSourceNetworkMode(site.id, selected);
+      await _store.setSourceNetworkMode(site.id, selected);
+      if (mounted) setState(() {});
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('设置网络策略失败：$error')),
+      );
+    }
   }
 }
 

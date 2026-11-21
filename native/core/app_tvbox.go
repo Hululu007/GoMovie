@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -107,6 +108,10 @@ func registerTVBoxSitesLocked(sites []tvbox.Site, spiderURL string) []string {
 		seen[id] = true
 		siteCopy := site
 		spiderCopy := strings.TrimSpace(spiderURL)
+		var aliases []string
+		if parsed, err := url.Parse(strings.TrimSpace(siteCopy.API)); err == nil && parsed.Hostname() != "" {
+			aliases = []string{strings.ToLower(parsed.Hostname())}
+		}
 		Unregister(id)
 		Register(SourceDescriptor{
 			ID:             id,
@@ -114,6 +119,8 @@ func registerTVBoxSitesLocked(sites []tvbox.Site, spiderURL string) []string {
 			Description:    "订阅源（" + string(siteCopy.Kind) + "）",
 			Group:          "tvbox",
 			GroupName:      "饭太硬订阅",
+			Aliases:        aliases,
+			BaseURL:        strings.TrimSpace(siteCopy.API),
 			SkipVIPPrompt:  true,
 			NoHostRotation: true,
 		}, func(host Host) Provider {
