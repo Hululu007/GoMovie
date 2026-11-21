@@ -31,7 +31,6 @@ class StageBackdrop extends StatelessWidget {
               child: Image(
                 image: _provider(cover),
                 fit: BoxFit.cover,
-                cacheWidth: 96,
                 errorBuilder: (context, error, stack) => const SizedBox.shrink(),
                 frameBuilder: (context, child, frame, wasSync) => Opacity(
                   opacity: (frame == null && !wasSync) ? 0 : 1,
