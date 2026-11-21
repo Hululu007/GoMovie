@@ -927,6 +927,22 @@ class _PortraitPlayerPageState extends State<PortraitPlayerPage>
           color: Colors.white,
           activeColor: Theme.of(context).colorScheme.primaryFixedDim,
         ),
+        if (session.supportsDanmaku)
+          IconButton(
+            onPressed: () {
+              unawaited(HapticFeedback.selectionClick());
+              unawaited(session.toggleDanmaku());
+            },
+            icon: Icon(
+              session.danmakuEnabled
+                  ? Icons.subtitles_rounded
+                  : Icons.subtitles_off_rounded,
+            ),
+            color: session.danmakuEnabled
+                ? Theme.of(context).colorScheme.primary
+                : Colors.white,
+            tooltip: session.danmakuEnabled ? '关闭弹幕' : '打开弹幕',
+          ),
         if (!desktopPlatform) PlayerLockButton(locked: false, onPressed: _lock),
       ],
     );
