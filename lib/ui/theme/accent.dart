@@ -71,6 +71,26 @@ abstract final class AccentPicker {
   /// 深色底，用来算对比度
   static const _bg = Color(0xFF0B1120);
 
+  /// 统一入口：http(s) 走网络，其余当本地缓存文件。
+  static Future<AccentScheme?> fromSource(String source) async {
+    if (source.isEmpty) return null;
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return fromUrl(source);
+    }
+    return fromFile(source);
+  }
+
+  /// 从本地封面文件取色（App 的海报是缓存到本地的）。
+  static Future<AccentScheme?> fromFile(String path) async {
+    try {
+      final file = File(path);
+      if (!await file.exists()) return null;
+      return fromBytes(await file.readAsBytes(), source: path);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// 从网络封面取色；失败返回 null（调用方用 fallback）。
   static Future<AccentScheme?> fromUrl(String url) async {
     if (url.isEmpty) return null;

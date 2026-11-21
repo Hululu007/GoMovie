@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,11 @@ class StageBackdrop extends StatelessWidget {
   final String cover;
   final AccentScheme accent;
 
+  static ImageProvider _provider(String cover) =>
+      (cover.startsWith('http://') || cover.startsWith('https://'))
+      ? NetworkImage(cover)
+      : FileImage(File(cover));
+
   @override
   Widget build(BuildContext context) {
     final base = Theme.of(context).colorScheme.surface;
@@ -22,8 +28,8 @@ class StageBackdrop extends StatelessWidget {
           if (cover.isNotEmpty)
             ImageFiltered(
               imageFilter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Image.network(
-                cover,
+              child: Image(
+                image: _provider(cover),
                 fit: BoxFit.cover,
                 cacheWidth: 96,
                 errorBuilder: (context, error, stack) => const SizedBox.shrink(),

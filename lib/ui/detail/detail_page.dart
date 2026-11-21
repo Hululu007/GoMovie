@@ -199,6 +199,7 @@ class _DetailPageState extends State<DetailPage> {
   final _televisionDetail = GlobalKey<TelevisionDetailState>();
   AccentScheme _accent = AccentScheme.fallback;
   String _accentKey = '';
+  String _coverPath = '';
   bool _entered = false;
   PlaybackHandle? _watched;
   late final bool _direct = AppScope.formFactorOf(context) == FormFactor.phone;
@@ -448,6 +449,16 @@ class _DetailPageState extends State<DetailPage> {
     });
   }
 
+  /// 解析封面到本地缓存文件，成功后取色。
+  Future<void> _loadCover() async {
+    try {
+      final path = await AppScope.of(context).repository.cover(widget.drama);
+      if (!mounted || path == _coverPath) return;
+      setState(() => _coverPath = path);
+      _syncAccent(path);
+    } catch (_) {}
+  }
+
   /// 封面变了才重新取色；取到之前先用品牌色，不阻塞页面。
   void _syncAccent(String cover) {
     if (cover == _accentKey) return;
@@ -456,7 +467,7 @@ class _DetailPageState extends State<DetailPage> {
       _accent = AccentScheme.fallback;
       return;
     }
-    AccentPicker.fromUrl(cover).then((value) {
+    AccentPicker.fromSource(cover).then((value) {
       if (!mounted || value == null || _accentKey != cover) return;
       setState(() => _accent = value);
     });
@@ -480,17 +491,13 @@ class _DetailPageState extends State<DetailPage> {
       }
       if (_curtain) return _transition(widget.drama);
       final form = AppScope.formFactorOf(context);
-      _syncAccent(details.drama.cover);
+      if (_coverPath.isEmpty) unawaited(_loadCover());
       if (form == FormFactor.television) return _televisionPage(details);
       final page = (form == FormFactor.phone ||
               MediaQuery.sizeOf(context).width < 840)
           ? _phonePage(details)
           : _widePage(details, desktop: form == FormFactor.window);
-      return AccentStage(
-        accent: _accent,
-        cover: details.drama.cover,
-        child: page,
-      );
+      return AccentStage(accent: _accent, cover: _coverPath, child: page);
     },
   );
 
