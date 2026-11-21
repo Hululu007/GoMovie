@@ -13,6 +13,7 @@ import '../downloads/download_picker_page.dart';
 import '../player/playback_handle.dart';
 import '../player/playback_page.dart';
 import '../settings/settings_page.dart';
+import '../settings/sorani_account_view.dart';
 import '../shell/app_shell.dart';
 import '../widgets/cover_backdrop.dart';
 import '../widgets/cover_image.dart';
@@ -1277,9 +1278,20 @@ class _DetailPageState extends State<DetailPage> {
         }
         details.load();
       },
-      secondaryAction: error != null ? '网络代理' : null,
+      secondaryAction: error != null
+          ? (widget.drama.source == 'sorani' &&
+                    (error.contains('登录') || error.contains('账号'))
+                ? '登录青空'
+                : '网络代理')
+          : null,
       onSecondaryAction: error != null
           ? () async {
+              if (widget.drama.source == 'sorani' &&
+                  (error.contains('登录') || error.contains('账号'))) {
+                final account = await showSoraniLogin(context);
+                if (mounted && account != null) details.load();
+                return;
+              }
               await openProxySettings(context, AppScope.of(context).store);
               if (mounted) details.load();
             }

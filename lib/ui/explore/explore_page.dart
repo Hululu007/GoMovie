@@ -11,6 +11,7 @@ import '../app_scope.dart';
 import '../cover_blur.dart';
 import '../detail/detail_page.dart';
 import '../settings/settings_page.dart';
+import '../settings/sorani_account_view.dart';
 import '../shell/app_shell.dart';
 import '../theme/motion.dart';
 import '../widgets/bar_button.dart';
@@ -392,6 +393,10 @@ class ExplorePageState extends State<ExplorePage> {
     if (feed.error.isNotEmpty) {
       final isChallenge =
           WebViewBridge.supported && WebViewBridge.isChallengeError(feed.error);
+      final sourceId = _explore?.source?.id ?? '';
+      final needsSoraniLogin =
+          sourceId == 'sorani' &&
+          (feed.error.contains('登录') || feed.error.contains('账号'));
       return StatusView(
         key: const ValueKey('error'),
         title: isChallenge ? '需要完成人机验证' : '暂时无法加载',
@@ -400,11 +405,10 @@ class ExplorePageState extends State<ExplorePage> {
         action: isChallenge ? '完成人机验证' : '重试',
         onAction: () async {
           if (isChallenge) {
-            final source = _explore?.source?.id ?? '';
-            if (source.isEmpty) return;
+            if (sourceId.isEmpty) return;
             final ok = await WebViewBridge.verifySource(
               AppScope.of(context).repository,
-              source,
+              sourceId,
             );
             if (!mounted) return;
             if (ok) {
@@ -414,8 +418,13 @@ class ExplorePageState extends State<ExplorePage> {
           }
           feed.reload(force: true);
         },
-        secondaryAction: '网络代理',
+        secondaryAction: needsSoraniLogin ? '登录青空' : '网络代理',
         onSecondaryAction: () async {
+          if (needsSoraniLogin) {
+            final account = await showSoraniLogin(context);
+            if (mounted && account != null) feed.reload(force: true);
+            return;
+          }
           await openProxySettings(context, AppScope.of(context).store);
           if (mounted) feed.reload(force: true);
         },
