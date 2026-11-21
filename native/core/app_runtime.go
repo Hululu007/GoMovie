@@ -38,6 +38,8 @@ type Downloader struct {
 	limiter           *requestLimiter
 	proxyRouter       *proxyRouter
 	directOnce        sync.Once
+	hongguoCookieMu   sync.RWMutex
+	hongguoCookie     string
 	direct            *http.Client
 	diagnostics       *diagnosticLog
 }
@@ -274,6 +276,7 @@ func newNativeEngine(directory, cache, downloads string) (*nativeEngine, error) 
 			return nil
 		}}
 	engine := &nativeEngine{downloader: d, directory: directory, cacheDirectory: cache, defaultDownloads: nativeDefaultDownloads(directory), catalogs: map[string][]LibraryDrama{}, catalogStates: map[string]nativeCatalogState{}}
+	engine.hongguoRestore()
 	if filepath.IsAbs(downloads) {
 		engine.defaultDownloads = filepath.Clean(downloads)
 	}
@@ -387,6 +390,14 @@ func nativeDispatch(input nativeInput) (any, error) {
 	case "modules":
 		items, err := engine.modules()
 		return map[string]any{"items": items}, err
+	case "hongguoStatus":
+		return engine.hongguoStatus(), nil
+	case "hongguoLogin":
+		return engine.hongguoLoginStart(ctx)
+	case "hongguoLoginPoll":
+		return engine.hongguoLoginPoll(ctx, input.Session)
+	case "hongguoLogout":
+		return engine.hongguoLogout()
 	case "netdiskStatus":
 		return engine.netdiskStatus()
 	case "netdiskLogin":
