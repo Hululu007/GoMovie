@@ -14,13 +14,14 @@ import (
 )
 
 type nativeResourceSettings struct {
-	ProxyMode           string `json:"proxyMode"`
-	ProxyURL            string `json:"proxyUrl"`
-	CatalogConcurrency  int    `json:"catalogConcurrency"`
-	DownloadConcurrency int    `json:"downloadConcurrency"`
-	DownloadBySource    bool   `json:"downloadBySource"`
-	Warning             string `json:"warning,omitempty"`
-	SystemProxyStatus   string `json:"systemProxyStatus,omitempty"`
+	ProxyMode           string            `json:"proxyMode"`
+	ProxyURL            string            `json:"proxyUrl"`
+	CatalogConcurrency  int               `json:"catalogConcurrency"`
+	DownloadConcurrency int               `json:"downloadConcurrency"`
+	DownloadBySource    bool              `json:"downloadBySource"`
+	SourceNetworkModes  map[string]string `json:"sourceNetworkModes,omitempty"`
+	Warning             string            `json:"warning,omitempty"`
+	SystemProxyStatus   string            `json:"systemProxyStatus,omitempty"`
 }
 
 func defaultResourceSettings() nativeResourceSettings {
@@ -52,6 +53,11 @@ func (settings nativeResourceSettings) validate() error {
 			}
 		}
 	}
+	for _, m := range settings.SourceNetworkModes {
+		if m != "" && m != "follow" && m != "direct" && m != "proxy" {
+			return errors.New("站源网络策略无效")
+		}
+	}
 	return nil
 }
 
@@ -59,6 +65,7 @@ type proxyRouter struct {
 	mu             sync.RWMutex
 	mode           string
 	manual         *url.URL
+	sourceModes    map[string]string
 	system         nativeSystemProxy
 	systemRead     time.Time
 	systemOverride bool
@@ -70,9 +77,26 @@ func (router *proxyRouter) proxy(request *http.Request) (*url.URL, error) {
 	if request.URL.Hostname() == "127.0.0.1" || request.URL.Hostname() == "localhost" || request.URL.Hostname() == "::1" {
 		return nil, nil
 	}
+	source := ProviderSourceForURL(request.URL.String())
+	if source == "" {
+		source, _ = registeredSource(request.URL.Hostname())
+	}
 	router.mu.RLock()
 	mode, manual := router.mode, router.manual
+	sourceMode := ""
+	if source != "" && router.sourceModes != nil {
+		sourceMode = router.sourceModes[strings.ToLower(source)]
+	}
 	router.mu.RUnlock()
+	switch sourceMode {
+	case "direct":
+		return nil, nil
+	case "proxy":
+		if manual != nil {
+			return manual, nil
+		}
+		return router.resolveSystem(request)
+	}
 	switch mode {
 	case "direct":
 		return nil, nil
@@ -126,8 +150,14 @@ func (engine *nativeEngine) resourceSettings() nativeResourceSettings {
 func (engine *nativeEngine) applyResourceSettings(settings nativeResourceSettings) {
 	router := engine.downloader.proxyRouter
 	manual, _ := url.Parse(settings.ProxyURL)
+	sourceModes := make(map[string]string, len(settings.SourceNetworkModes))
+	for k, v := range settings.SourceNetworkModes {
+		if v == "direct" || v == "proxy" {
+			sourceModes[strings.ToLower(strings.TrimSpace(k))] = v
+		}
+	}
 	router.mu.Lock()
-	router.mode, router.manual = settings.ProxyMode, manual
+	router.mode, router.manual, router.sourceModes = settings.ProxyMode, manual, sourceModes
 	router.mu.Unlock()
 	limiter := engine.downloader.limiter
 	limiter.mu.Lock()
@@ -141,6 +171,34 @@ func (engine *nativeEngine) applyResourceSettings(settings nativeResourceSetting
 		engine.downloads.scheduleLocked()
 		engine.downloads.mu.Unlock()
 	}
+}
+
+func (engine *nativeEngine) setSourceNetworkMode(source, mode string) (nativeResourceSettings, error) {
+	id := strings.ToLower(strings.TrimSpace(source))
+	m := strings.ToLower(strings.TrimSpace(mode))
+	if id == "" {
+		return nativeResourceSettings{}, errors.New("站源标识无效")
+	}
+	if m == "" {
+		m = "follow"
+	}
+	engine.settingsMu.Lock()
+	settings := engine.settings
+	if settings.ProxyMode == "" {
+		settings = defaultResourceSettings()
+	}
+	next := make(map[string]string, len(settings.SourceNetworkModes)+1)
+	for k, v := range settings.SourceNetworkModes {
+		next[k] = v
+	}
+	if m == "follow" {
+		delete(next, id)
+	} else {
+		next[id] = m
+	}
+	settings.SourceNetworkModes = next
+	engine.settingsMu.Unlock()
+	return engine.saveResourceSettings(settings)
 }
 
 func (engine *nativeEngine) saveResourceSettings(settings nativeResourceSettings) (nativeResourceSettings, error) {

@@ -427,6 +427,8 @@ func nativeDispatch(input nativeInput) (any, error) {
 		return engine.setSpiderBridge(input.Index), nil
 	case "sourceChallengeUrl":
 		return map[string]any{"url": engine.sourceChallengeURL(input.Source)}, nil
+	case "setSourceNetworkMode":
+		return engine.setSourceNetworkMode(input.Source, input.URL)
 	case "moduleIndex":
 		return engine.moduleStore(ctx)
 	case "prepareModule":

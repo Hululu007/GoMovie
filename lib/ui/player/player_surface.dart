@@ -959,9 +959,14 @@ class _PlayerSurfaceState extends State<PlayerSurface> {
       ),
     };
     return Material(
-      color: const Color(0xE0141414),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(padding: const EdgeInsets.all(6), child: body),
+      color: const Color(0xEE16161B),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+      ),
+      elevation: 12,
+      shadowColor: Colors.black54,
+      child: Padding(padding: const EdgeInsets.all(8), child: body),
     );
   }
 

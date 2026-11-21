@@ -160,6 +160,7 @@ abstract class AppRepository {
     String userAgent = '',
   }) async {}
   Future<void> registerSpiderBridge(int port) async {}
+  Future<void> setSourceNetworkMode(String source, String mode) async {}
   Future<List<String>> suggestions(String source, String query) async =>
       const [];
   Future<Map<String, dynamic>> storage() async => {};
@@ -973,6 +974,15 @@ class NativeRepository extends AppRepository {
   @override
   Future<void> registerSpiderBridge(int port) async {
     await _call({'action': 'spiderBridge', 'index': port});
+  }
+
+  @override
+  Future<void> setSourceNetworkMode(String source, String mode) async {
+    await _call({
+      'action': 'setSourceNetworkMode',
+      'source': source,
+      'url': mode,
+    });
   }
 
   @override

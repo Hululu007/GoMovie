@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../local_store.dart';
 import '../../models.dart';
+import '../app_scope.dart';
+import '../widgets/choice_panel.dart';
 
 /// 站源选择面板：按 group 分段（全部 / 内置 / 饭太硬 / 网盘），
 /// 订阅源多起来以后一屏塞不下，分段 + 搜索比翻两屏快。
@@ -204,11 +206,22 @@ class _SourcePickerState extends State<SourcePicker> {
                             _SourceChip(
                               site: site,
                               selected: site.id == current,
+                              networkMode: _store.sourceNetworkMode(site.id),
                               onTap: () => _choose(site.id),
+                              onPickNetwork: () => _pickNetworkMode(site),
                             ),
                         ],
                       ),
                     ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
+              child: Text(
+                '长按或右键站源可单独设置直连 / 代理',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
             ),
             if (_store.profile.admin)
               SafeArea(
@@ -229,25 +242,56 @@ class _SourcePickerState extends State<SourcePicker> {
       ),
     );
   }
+
+  Future<void> _pickNetworkMode(SourceSite site) async {
+    final current = _store.sourceNetworkMode(site.id);
+    final selected = await showChoicePanel<String>(
+      context: context,
+      title: '${site.name} · 网络策略',
+      options: const [
+        ChoiceOption('follow', '跟随全局'),
+        ChoiceOption('direct', '强制直连'),
+        ChoiceOption('proxy', '强制代理'),
+      ],
+      selected: current,
+      grid: ChoiceGrid.sources,
+    );
+    if (selected == null || selected == current || !mounted) return;
+    final repo = AppScope.of(context).repository;
+    await repo.setSourceNetworkMode(site.id, selected);
+    await _store.setSourceNetworkMode(site.id, selected);
+    if (mounted) setState(() {});
+  }
 }
 
 class _SourceChip extends StatelessWidget {
   const _SourceChip({
     required this.site,
     required this.selected,
+    required this.networkMode,
     required this.onTap,
+    required this.onPickNetwork,
   });
 
   final SourceSite site;
   final bool selected;
+  final String networkMode;
   final VoidCallback onTap;
+  final VoidCallback onPickNetwork;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final netLabel = switch (networkMode) {
+      'direct' => '直连',
+      'proxy' => '代理',
+      _ => '',
+    };
     return InkWell(
       borderRadius: BorderRadius.circular(10),
       onTap: onTap,
+      onLongPress: onPickNetwork,
+      onSecondaryTap: onPickNetwork,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
@@ -276,6 +320,24 @@ class _SourceChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 9,
                   color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+            if (netLabel.isNotEmpty) ...[
+              const SizedBox(width: 5),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: colors.tertiary.withValues(alpha: 0.20),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  netLabel,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: colors.tertiary,
+                  ),
                 ),
               ),
             ],

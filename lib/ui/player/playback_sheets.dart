@@ -34,8 +34,15 @@ Future<void> showPlayerSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true,
     barrierColor: barrierColor,
     backgroundColor: theme.colorScheme.surfaceContainerLow,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      side: BorderSide(
+        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+      ),
+    ),
     constraints: fitContent
         ? BoxConstraints(maxHeight: height)
         : BoxConstraints.tightFor(height: height),
@@ -43,24 +50,7 @@ Future<void> showPlayerSheet(
       data: theme,
       child: DefaultTextStyle.merge(
         style: TextStyle(color: theme.colorScheme.onSurface),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 32,
-                height: 4,
-                margin: const EdgeInsets.only(top: 10),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Flexible(child: Builder(builder: builder)),
-          ],
-        ),
+        child: Builder(builder: builder),
       ),
     ),
   );

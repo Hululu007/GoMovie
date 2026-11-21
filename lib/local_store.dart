@@ -380,6 +380,27 @@ class LocalStore extends ChangeNotifier {
     _ => true,
   };
 
+  String sourceNetworkMode(String source) =>
+      switch (_settings['sourceNetworkModes']) {
+        final Map modes when modes[source] is String =>
+          modes[source] as String,
+        _ => 'follow',
+      };
+
+  Future<void> setSourceNetworkMode(String source, String mode) {
+    final epoch = _epoch;
+    return _queue(() async {
+      if (epoch != _epoch) throw StateError('当前用户已变更，请重试');
+      final next = {..._map(_settings['sourceNetworkModes'])};
+      if (mode == 'follow' || mode.isEmpty) {
+        next.remove(source);
+      } else {
+        next[source] = mode;
+      }
+      await _saveSettings({..._settings, 'sourceNetworkModes': next});
+    });
+  }
+
   Future<void> setSourceEnabled(String source, bool enabled) {
     if (!SourceSite.isAvailable(source)) {
       return Future.error(StateError('站源无效'));
