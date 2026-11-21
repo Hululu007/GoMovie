@@ -1292,7 +1292,7 @@ class _DetailPageState extends State<DetailPage> {
                 if (mounted && account != null) details.load();
                 return;
               }
-              await openProxySettings(context, AppScope.of(context).store);
+              await openProxySettings(context, widget.store);
               if (mounted) details.load();
             }
           : null,

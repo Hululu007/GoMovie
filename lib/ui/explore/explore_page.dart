@@ -425,7 +425,7 @@ class ExplorePageState extends State<ExplorePage> {
             if (mounted && account != null) feed.reload(force: true);
             return;
           }
-          await openProxySettings(context, AppScope.of(context).store);
+          await openProxySettings(context, widget.store);
           if (mounted) feed.reload(force: true);
         },
       );

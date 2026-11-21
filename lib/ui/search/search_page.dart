@@ -409,7 +409,7 @@ class _SearchPageState extends State<SearchPage> {
           },
           secondaryAction: '网络代理',
           onSecondaryAction: () async {
-            await openProxySettings(context, AppScope.of(context).store);
+            await openProxySettings(context, widget.store);
             if (mounted) results.reload();
           },
         );
